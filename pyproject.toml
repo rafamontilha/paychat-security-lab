@@ -1,0 +1,53 @@
+﻿[project]
+name = "paychat-security-lab"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi==0.115.*",
+    "uvicorn[standard]",
+    "sqlalchemy==2.0.*",
+    "alembic",
+    "chromadb==0.5.*",
+    "langgraph==0.2.*",
+    "groq==0.13.*",
+    "openai==1.55.*",
+    "anthropic",
+    "sentence-transformers",
+    "redis",
+    "pydantic>=2.0",
+    "python-dotenv",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff",
+    "black",
+    "mypy",
+    "pytest",
+    "pytest-asyncio",
+]
+whitebox = [
+    "torch>=2.5",
+    "transformers>=4.46",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+select = ["E", "F", "I"]
+
+[tool.black]
+line-length = 100
+target-version = ["py311"]
+
+[tool.mypy]
+python_version = "3.11"
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
