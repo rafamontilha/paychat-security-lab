@@ -26,7 +26,9 @@ def get_actor_context(
     r = get_redis()
     raw = r.get(f"session:{token}")
     if not raw:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired token")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired token"
+        )
     data = json.loads(raw)
     user = db.get(User, data["user_id"])
     if not user:
@@ -47,7 +49,9 @@ ActorContext = Annotated[dict, Depends(get_actor_context)]
 def require_roles(*roles: Role):
     def dependency(actor: ActorContext) -> dict:
         if actor["role"] not in [r.value for r in roles]:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient permissions")
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient permissions"
+            )
         return actor
 
     return Depends(dependency)

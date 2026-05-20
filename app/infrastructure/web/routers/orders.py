@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.infrastructure.persistence.database import get_db
 from app.infrastructure.persistence.models import Order, Role
-from app.infrastructure.web.dependencies import ActorContext, require_roles
+from app.infrastructure.web.dependencies import ActorContext
 
 router = APIRouter(prefix="/api/orders", tags=["orders"])
 
@@ -34,5 +34,7 @@ def get_order(order_id: int, actor: ActorContext, db: Session = Depends(get_db))
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
     if actor["role"] not in (Role.admin.value, Role.support.value):
         if order.buyer_id != actor["user_id"]:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient permissions")
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient permissions"
+            )
     return order

@@ -31,7 +31,9 @@ def request_refund(
 
     is_admin = actor["role"] == Role.admin.value
     if not is_admin and order.buyer_id != actor["user_id"]:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient permissions")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient permissions"
+        )
 
     if order.status == OrderStatus.refunded:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Order already refunded")

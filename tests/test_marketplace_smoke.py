@@ -127,8 +127,6 @@ def test_get_product(client, buyer_token, db_session):
 
 
 def test_list_orders_buyer_sees_own(client, buyer_token, db_session):
-    from app.infrastructure.persistence.models import Order
-
     buyer = db_session.query(User).filter(User.role == Role.buyer).first()
     resp = client.get("/api/orders", headers=auth(buyer_token))
     assert resp.status_code == 200

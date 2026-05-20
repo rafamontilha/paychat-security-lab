@@ -13,18 +13,19 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from sqlalchemy.orm import Session as OrmSession
-
-from app.infrastructure.persistence.database import get_engine
-from app.infrastructure.persistence.models import (
+from app.infrastructure.persistence.database import get_engine  # noqa: E402
+from app.infrastructure.persistence.models import (  # noqa: E402
+    AuditLog,
     Message,
     Order,
     OrderStatus,
     Product,
     Role,
+    Session as DbSession,
     Transaction,
     User,
 )
+from sqlalchemy.orm import Session as OrmSession  # noqa: E402
 
 try:
     from faker import Faker
@@ -65,8 +66,6 @@ def _format_card(raw: str) -> str:
 
 def seed(db: OrmSession) -> None:
     # Idempotency: clear existing data respecting FK constraints
-    from app.infrastructure.persistence.models import AuditLog, Session as DbSession
-
     for model in [AuditLog, Transaction, Message, DbSession, Order, Product, User]:
         db.query(model).delete()
     db.commit()
@@ -105,7 +104,9 @@ def seed(db: OrmSession) -> None:
 
     # Orders (200)
     orders: list[Order] = []
-    statuses = [OrderStatus.pending] * 80 + [OrderStatus.completed] * 80 + [OrderStatus.disputed] * 40
+    statuses = (
+        [OrderStatus.pending] * 80 + [OrderStatus.completed] * 80 + [OrderStatus.disputed] * 40
+    )
     random.shuffle(statuses)
     for i in range(200):
         buyer = random.choice(users[Role.buyer])
@@ -121,7 +122,9 @@ def seed(db: OrmSession) -> None:
     db.flush()
 
     # Transactions (50) — Luhn-valid payment tokens
-    completed_orders = [o for o in orders if o.status in (OrderStatus.completed, OrderStatus.disputed)]
+    completed_orders = [
+        o for o in orders if o.status in (OrderStatus.completed, OrderStatus.disputed)
+    ]
     tx_orders = random.sample(completed_orders, min(50, len(completed_orders)))
     for o in tx_orders:
         raw = _luhn_token(16)
@@ -147,8 +150,9 @@ def seed(db: OrmSession) -> None:
     db.commit()
 
     total_users = sum(PROFILE_COUNTS.values())
-    print(f"Seed concluído:")
-    print(f"  {total_users} usuários ({', '.join(f'{r.value}={c}' for r, c in PROFILE_COUNTS.items())})")
+    print("Seed concluído:")
+    counts = ", ".join(f"{r.value}={c}" for r, c in PROFILE_COUNTS.items())
+    print(f"  {total_users} usuários ({counts})")
     print(f"  {len(products)} produtos")
     print(f"  {len(orders)} pedidos")
     print(f"  {len(tx_orders)} transações com tokens Luhn")

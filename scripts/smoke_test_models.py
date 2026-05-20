@@ -79,7 +79,7 @@ def main() -> None:
     print("=== PayChat Security Lab — Smoke Test ===\n")
     errors: list[str] = []
 
-    for name, fn in [("Claude", test_claude), ("Llama", test_llama), ("LlamaGuard", test_llama_guard)]:
+    for name, fn in [("Claude", test_claude), ("Llama", test_llama), ("LlamaGuard", test_llama_guard)]:  # noqa: E501
         try:
             fn()
         except Exception as exc:
