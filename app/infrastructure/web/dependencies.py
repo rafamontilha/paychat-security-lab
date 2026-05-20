@@ -29,6 +29,7 @@ def get_actor_context(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired token"
         )
+    assert isinstance(raw, (str, bytes, bytearray))
     data = json.loads(raw)
     user = db.get(User, data["user_id"])
     if not user:
