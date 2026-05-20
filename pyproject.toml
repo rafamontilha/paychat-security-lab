@@ -35,6 +35,9 @@ whitebox = [
     "torch>=2.5",
     "transformers>=4.46",
 ]
+agent = [
+    "langchain-anthropic>=0.3",
+]
 
 [build-system]
 requires = ["hatchling"]
@@ -62,3 +65,4 @@ ignore_missing_imports = true
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
+markers = ["integration: requires ANTHROPIC_API_KEY, excluded from CI default"]

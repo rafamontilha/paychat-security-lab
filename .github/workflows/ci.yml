@@ -74,7 +74,7 @@ jobs:
         run: pip install uv
 
       - name: Install dependencies
-        run: uv sync --extra dev --extra rag
+        run: uv sync --extra dev --extra rag --extra agent
 
       - name: Cache HuggingFace model
         uses: actions/cache@v4
@@ -94,5 +94,10 @@ jobs:
 
       - name: Run RAG tests
         run: uv run pytest tests/test_rag_ingest.py tests/test_rag_endpoint.py -v
+        env:
+          PYTHONPATH: .
+
+      - name: Run Variant A tool tests
+        run: uv run pytest tests/test_variant_a_tools.py tests/test_variant_a_agent.py -v -m "not integration"
         env:
           PYTHONPATH: .
