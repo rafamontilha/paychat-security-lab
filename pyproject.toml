@@ -1,4 +1,4 @@
-﻿[project]
+[project]
 name = "paychat-security-lab"
 version = "0.1.0"
 requires-python = ">=3.11"
@@ -11,7 +11,6 @@ dependencies = [
     "groq==0.13.*",
     "openai==1.55.*",
     "anthropic",
-    "sentence-transformers",
     "redis",
     "pydantic>=2.0",
     "python-dotenv",
@@ -40,6 +39,9 @@ whitebox = [
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.uv]
+package = false
 
 [tool.ruff]
 line-length = 100
