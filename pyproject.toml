@@ -16,6 +16,9 @@ dependencies = [
     "redis",
     "pydantic>=2.0",
     "python-dotenv",
+    "psycopg2-binary",
+    "faker",
+    "httpx",
 ]
 
 [project.optional-dependencies]
