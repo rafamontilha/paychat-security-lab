@@ -1,6 +1,9 @@
 # Changelog
 
 ## 2026-05-20
+- feat: Fase 4 — Variante A: agente ReAct Claude (LangGraph + Anthropic)
+- docs: spec fase 4 — agente Claude via Anthropic API (LangGraph + 5 tools + trace)
+- feat: fase 3 — RAG operacional com ChromaDB, FAQ e superfície de RAG poisoning
 - fix: satisfy mypy on redis.get() return type in dependencies
 - style: apply black formatting to 5 files
 - fix: suprimir E402/I001 no seed.py com ruff noqa de arquivo

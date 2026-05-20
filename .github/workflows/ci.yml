@@ -74,7 +74,13 @@ jobs:
         run: pip install uv
 
       - name: Install dependencies
-        run: uv sync --extra dev
+        run: uv sync --extra dev --extra rag --extra agent
+
+      - name: Cache HuggingFace model
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/huggingface/hub
+          key: hf-all-MiniLM-L6-v2
 
       - name: Run migrations
         run: uv run alembic upgrade head
@@ -83,5 +89,15 @@ jobs:
 
       - name: Run smoke tests
         run: uv run pytest tests/test_marketplace_smoke.py -v
+        env:
+          PYTHONPATH: .
+
+      - name: Run RAG tests
+        run: uv run pytest tests/test_rag_ingest.py tests/test_rag_endpoint.py -v
+        env:
+          PYTHONPATH: .
+
+      - name: Run Variant A tool tests
+        run: uv run pytest tests/test_variant_a_tools.py tests/test_variant_a_agent.py -v -m "not integration"
         env:
           PYTHONPATH: .
