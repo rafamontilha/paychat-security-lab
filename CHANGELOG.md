@@ -1,6 +1,7 @@
 # Changelog
 
 ## 2026-05-20
+- feat: fase 3 — RAG operacional com ChromaDB, FAQ e superfície de RAG poisoning
 - fix: satisfy mypy on redis.get() return type in dependencies
 - style: apply black formatting to 5 files
 - fix: suprimir E402/I001 no seed.py com ruff noqa de arquivo
