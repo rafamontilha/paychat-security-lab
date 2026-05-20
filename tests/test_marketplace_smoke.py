@@ -221,9 +221,7 @@ def test_refund_other_users_order_forbidden(client, db_session):
     if not order_a:
         pytest.skip("No order for buyer_a")
 
-    resp = client.post(
-        "/api/refunds", json={"order_id": order_a.id}, headers=auth(token_b)
-    )
+    resp = client.post("/api/refunds", json={"order_id": order_a.id}, headers=auth(token_b))
     assert resp.status_code == 403
 
 

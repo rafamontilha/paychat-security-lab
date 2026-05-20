@@ -46,9 +46,7 @@ class User(Base):
         String(64), unique=True, nullable=False, default=lambda: secrets.token_hex(16)
     )
     role: Mapped[Role] = mapped_column(Enum(Role), nullable=False)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     products: Mapped[list["Product"]] = relationship(back_populates="seller")
     orders: Mapped[list["Order"]] = relationship(
@@ -72,9 +70,7 @@ class Product(Base):
     price: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
     category: Mapped[str] = mapped_column(String(60), nullable=False)
     seller_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     seller: Mapped["User"] = relationship(back_populates="products")
     orders: Mapped[list["Order"]] = relationship(back_populates="product")
@@ -88,9 +84,7 @@ class Order(Base):
     product_id: Mapped[int] = mapped_column(ForeignKey("products.id"), nullable=False)
     status: Mapped[OrderStatus] = mapped_column(Enum(OrderStatus), nullable=False)
     amount: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     buyer: Mapped["User"] = relationship(back_populates="orders", foreign_keys=[buyer_id])
     product: Mapped["Product"] = relationship(back_populates="orders")
@@ -104,9 +98,7 @@ class Transaction(Base):
     order_id: Mapped[int] = mapped_column(ForeignKey("orders.id"), nullable=False)
     payment_token: Mapped[str] = mapped_column(String(19), nullable=False)
     amount: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     order: Mapped["Order"] = relationship(back_populates="transactions")
 
@@ -118,9 +110,7 @@ class Session(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     session_token: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     user: Mapped["User"] = relationship(back_populates="sessions")
 
@@ -132,13 +122,9 @@ class Message(Base):
     sender_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     recipient_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
-    sender: Mapped["User"] = relationship(
-        back_populates="sent_messages", foreign_keys=[sender_id]
-    )
+    sender: Mapped["User"] = relationship(back_populates="sent_messages", foreign_keys=[sender_id])
     recipient: Mapped["User"] = relationship(
         back_populates="received_messages", foreign_keys=[recipient_id]
     )
@@ -148,9 +134,7 @@ class AuditLog(Base):
     __tablename__ = "audit_log"
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
-    timestamp: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     session_token: Mapped[str | None] = mapped_column(String(64), nullable=True)
     user_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     role: Mapped[str | None] = mapped_column(String(20), nullable=True)
