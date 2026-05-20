@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# ruff: noqa: E402, I001
 """Seed script — populates the database with synthetic data for red team experiments."""
 
 import random
