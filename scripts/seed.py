@@ -13,6 +13,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+from sqlalchemy.orm import Session as OrmSession  # noqa: E402
+
 from app.infrastructure.persistence.database import get_engine  # noqa: E402
 from app.infrastructure.persistence.models import (  # noqa: E402
     AuditLog,
@@ -25,7 +27,6 @@ from app.infrastructure.persistence.models import (  # noqa: E402
     Transaction,
     User,
 )
-from sqlalchemy.orm import Session as OrmSession  # noqa: E402
 
 try:
     from faker import Faker
