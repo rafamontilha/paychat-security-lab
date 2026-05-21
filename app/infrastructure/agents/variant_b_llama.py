@@ -36,6 +36,7 @@ class VariantBLlama:
         db: Session,
         chroma: chromadb.ClientAPI,
         redis_client: redis_lib.Redis,
+        temperature: float = 0.0,
     ) -> None:
         self._actor_context = actor_context
         self._redis = redis_client
@@ -48,7 +49,7 @@ class VariantBLlama:
             api_key=api_key,
             model=_MODEL,
             max_retries=0,
-            temperature=0,
+            temperature=temperature,
         )
         system_prompt = build_system_prompt(actor_context)
         self._graph = create_react_agent(llm, tools, prompt=system_prompt)

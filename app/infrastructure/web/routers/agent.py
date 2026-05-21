@@ -22,6 +22,7 @@ _VALID_VARIANTS = {"a", "b", "c"}
 class AgentChatRequest(BaseModel):
     session_token: str
     message: str
+    temperature: float = 0.0
 
 
 class AgentChatResponse(BaseModel):
@@ -84,6 +85,7 @@ def agent_chat(
             db=db,
             chroma=chroma,
             redis_client=redis_client,
+            temperature=body.temperature,
         )
     elif effective_variant == "b":
         from app.infrastructure.agents.variant_b_llama import VariantBLlama
@@ -93,6 +95,7 @@ def agent_chat(
             db=db,
             chroma=chroma,
             redis_client=redis_client,
+            temperature=body.temperature,
         )
     else:
         from app.infrastructure.agents.variant_c_pipeline import VariantCPipeline
@@ -102,6 +105,7 @@ def agent_chat(
             db=db,
             chroma=chroma,
             redis_client=redis_client,
+            temperature=body.temperature,
         )
 
     try:

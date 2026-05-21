@@ -2,7 +2,7 @@
 
 Stage 1: LlamaGuardClient classifies input; unsafe → GuardBlockedError (fail-closed).
 Stage 2: VariantBLlama executes the ReAct loop (reused by composition, no duplication).
-Stage 3: PresidioClient scans output; block-policy entity → blocked response; redact-policy → <REDACTED:TYPE>.
+Stage 3: PresidioClient scans output; block-policy → blocked; redact-policy → <REDACTED:TYPE>.
 
 Each stage appends a TraceStep so the full pipeline trace is observable.
 """
@@ -13,7 +13,7 @@ import chromadb
 import redis as redis_lib
 from sqlalchemy.orm import Session
 
-from app.agents.variant_c.system_prompt import build_system_prompt  # noqa: F401 (side-effect import OK)
+from app.agents.variant_c.system_prompt import build_system_prompt  # noqa: F401
 from app.domain.entities.agent_trace import TraceStep
 from app.infrastructure.agents.variant_b_llama import VariantBLlama
 from app.infrastructure.defenses.llama_guard import (
@@ -31,6 +31,7 @@ class VariantCPipeline:
         db: Session,
         chroma: chromadb.ClientAPI,
         redis_client: redis_lib.Redis,
+        temperature: float = 0.0,
     ) -> None:
         self._actor_context = actor_context
         self._guard = LlamaGuardClient()
@@ -39,6 +40,7 @@ class VariantCPipeline:
             db=db,
             chroma=chroma,
             redis_client=redis_client,
+            temperature=temperature,
         )
         self._presidio = PresidioClient()
 
