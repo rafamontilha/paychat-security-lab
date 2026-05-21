@@ -165,7 +165,48 @@ def test_invalid_variant_via_header_returns_400(client) -> None:
         resp = client.post(
             "/api/agent/chat",
             json=_CHAT_BODY,
-            headers={"X-Variant": "c"},
+            headers={"X-Variant": "z"},
         )
 
     assert resp.status_code == 400
+
+
+# ---------------------------------------------------------------------------
+# Variant C routing
+# ---------------------------------------------------------------------------
+
+
+def test_query_param_variant_c_dispatches_to_variant_c(client) -> None:
+    mock_agent = _mock_agent()
+    with (
+        _patch_redis(),
+        _patch_resolve_actor(),
+        patch(
+            "app.infrastructure.agents.variant_c_pipeline.VariantCPipeline",
+            return_value=mock_agent,
+        ) as MockC,
+    ):
+        resp = client.post("/api/agent/chat?variant=c", json=_CHAT_BODY)
+
+    assert resp.status_code == 200
+    MockC.assert_called_once()
+
+
+def test_header_x_variant_c_dispatches_to_variant_c(client) -> None:
+    mock_agent = _mock_agent()
+    with (
+        _patch_redis(),
+        _patch_resolve_actor(),
+        patch(
+            "app.infrastructure.agents.variant_c_pipeline.VariantCPipeline",
+            return_value=mock_agent,
+        ) as MockC,
+    ):
+        resp = client.post(
+            "/api/agent/chat",
+            json=_CHAT_BODY,
+            headers={"X-Variant": "c"},
+        )
+
+    assert resp.status_code == 200
+    MockC.assert_called_once()
