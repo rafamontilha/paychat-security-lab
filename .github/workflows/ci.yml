@@ -101,3 +101,13 @@ jobs:
         run: uv run pytest tests/test_variant_a_tools.py tests/test_variant_a_agent.py -v -m "not integration"
         env:
           PYTHONPATH: .
+
+      - name: Run Variant B tests
+        run: uv run pytest tests/test_variant_b_system_prompt.py tests/test_variant_b_client.py tests/test_variant_b_adapter.py -v -m "not integration"
+        env:
+          PYTHONPATH: .
+
+      - name: Run agent routing tests
+        run: uv run pytest tests/test_agent_routing.py -v
+        env:
+          PYTHONPATH: .

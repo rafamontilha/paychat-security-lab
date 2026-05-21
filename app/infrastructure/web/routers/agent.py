@@ -2,7 +2,7 @@ import json
 
 import chromadb
 import redis as redis_lib
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -13,6 +13,8 @@ from app.infrastructure.rag.client import get_chroma_client
 from app.infrastructure.web.dependencies import get_redis
 
 router = APIRouter(prefix="/api/agent", tags=["agent"])
+
+_VALID_VARIANTS = {"a", "b"}
 
 
 class AgentChatRequest(BaseModel):
@@ -56,21 +58,42 @@ def _resolve_actor(
 @router.post("/chat", response_model=AgentChatResponse)
 def agent_chat(
     body: AgentChatRequest,
+    variant: str = Query(default="a"),
+    x_variant: str | None = Header(default=None),
     db: Session = Depends(get_db),
     chroma: chromadb.ClientAPI = Depends(get_chroma_client),
 ) -> AgentChatResponse:
+    effective_variant = x_variant if x_variant is not None else variant
+
+    if effective_variant not in _VALID_VARIANTS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Unknown variant '{effective_variant}'. Valid: {sorted(_VALID_VARIANTS)}",
+        )
+
     redis_client = get_redis()
     actor_context = _resolve_actor(body.session_token, redis_client, db)
 
-    from app.infrastructure.agents.variant_a_claude import VariantAClaude
+    if effective_variant == "a":
+        from app.infrastructure.agents.variant_a_claude import VariantAClaude
 
-    agent = VariantAClaude(
-        actor_context=actor_context,
-        db=db,
-        chroma=chroma,
-        redis_client=redis_client,
-    )
-    response, trace = agent.run(body.message)
+        agent: VariantAClaude | object = VariantAClaude(
+            actor_context=actor_context,
+            db=db,
+            chroma=chroma,
+            redis_client=redis_client,
+        )
+    else:
+        from app.infrastructure.agents.variant_b_llama import VariantBLlama
+
+        agent = VariantBLlama(
+            actor_context=actor_context,
+            db=db,
+            chroma=chroma,
+            redis_client=redis_client,
+        )
+
+    response, trace = agent.run(body.message)  # type: ignore[union-attr]
     return AgentChatResponse(
         response=response,
         trace=trace,

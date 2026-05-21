@@ -37,6 +37,7 @@ whitebox = [
 ]
 agent = [
     "langchain-anthropic>=0.3",
+    "langchain-openai>=0.2",
 ]
 
 [build-system]
@@ -65,4 +66,5 @@ ignore_missing_imports = true
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
-markers = ["integration: requires ANTHROPIC_API_KEY, excluded from CI default"]
+markers = ["integration: requires ANTHROPIC_API_KEY or GROQ_API_KEY, excluded from CI default"]
+addopts = "-m 'not integration'"
