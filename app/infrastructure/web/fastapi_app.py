@@ -12,7 +12,7 @@ from app.infrastructure.web.routers import (
     users,
 )
 
-app = FastAPI(title="PayChat Security Lab", version="0.4.0")
+app = FastAPI(title="PayChat Security Lab", version="0.6.0")
 
 app.add_middleware(AuditLogMiddleware)
 
@@ -29,3 +29,26 @@ app.include_router(agent.router)
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
+
+
+@app.get("/health/deep")
+def health_deep() -> dict[str, object]:
+    """Extended health check that probes downstream services used by Variant C."""
+    import os
+
+    import httpx
+
+    presidio_url = os.environ.get("PRESIDIO_URL", "http://presidio:3000")
+    try:
+        r = httpx.get(f"{presidio_url}/health", timeout=3.0)
+        presidio_ok = r.status_code == 200
+    except Exception:
+        presidio_ok = False
+
+    overall = "ok" if presidio_ok else "degraded"
+    return {
+        "status": overall,
+        "services": {
+            "presidio": "ok" if presidio_ok else "unavailable",
+        },
+    }

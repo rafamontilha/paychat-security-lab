@@ -1,6 +1,7 @@
 # Changelog
 
 ## 2026-05-21
+- feat: Fase 6 — Variante C: pipeline multi-model (Llama Guard + Llama 3.1 8B + Presidio)
 - fix: polish Fase 5 — model name, retry delays, BadRequestError handling and parity tests
 - feat: Fase 5 — Variante B: agente Llama 3.1 8B via Groq API (OpenAI-compatible)
 
