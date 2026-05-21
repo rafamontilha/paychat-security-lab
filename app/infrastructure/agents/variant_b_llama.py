@@ -11,7 +11,7 @@ from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, ToolMe
 from langchain_openai import ChatOpenAI
 from langgraph.errors import GraphRecursionError
 from langgraph.prebuilt import create_react_agent
-from openai import RateLimitError
+from openai import BadRequestError, RateLimitError
 from sqlalchemy.orm import Session
 
 from app.agents.variant_b.system_prompt import build_system_prompt
@@ -19,12 +19,12 @@ from app.domain.entities.agent_trace import TraceStep
 from app.infrastructure.agents.tools import make_tools
 
 _GROQ_BASE_URL = "https://api.groq.com/openai/v1"
-_MODEL = os.environ.get("GROQ_MODEL", "llama-3.1-8b-instant")
+_MODEL = os.environ.get("GROQ_MODEL", "meta-llama/llama-4-scout-17b-16e-instruct")
 _MAX_ITERATIONS = 10
 _HISTORY_TTL = 3600
 _HISTORY_MAX_MSGS = 20
 _HISTORY_KEY = "agent_history:{session_token}"
-_RETRY_DELAYS = (1.0, 2.0, 4.0)
+_RETRY_DELAYS = (5.0, 15.0, 30.0)
 
 _SLEEP = time.sleep
 
@@ -67,6 +67,10 @@ class VariantBLlama:
             return "max_iterations_reached", [
                 TraceStep(type="final", content="max_iterations_reached")
             ]
+        except BadRequestError as exc:
+            if "tool_use_failed" in str(exc):
+                return "tool_call_error", [TraceStep(type="final", content="tool_call_error")]
+            raise
 
         new_messages: list[BaseMessage] = result["messages"][len(history) :]
         trace = _extract_trace(new_messages)

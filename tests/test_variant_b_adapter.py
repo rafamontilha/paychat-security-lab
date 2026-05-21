@@ -19,6 +19,7 @@ import pytest
 import redis as redis_lib
 from langchain_core.messages import AIMessage, HumanMessage
 from langgraph.errors import GraphRecursionError
+from openai import BadRequestError
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
@@ -94,6 +95,27 @@ def test_max_iterations_returns_structured_response() -> None:
     assert len(trace) >= 1
     assert trace[-1].type == "final"
     assert trace[-1].content == "max_iterations_reached"
+
+
+def test_bad_request_tool_use_failed_returns_structured_response() -> None:
+    """Groq 400 tool_use_failed → 'tool_call_error', not an unhandled exception."""
+    agent = _make_agent("bad-request-test-b")
+    agent._graph = MagicMock()
+    mock_response = MagicMock()
+    mock_response.status_code = 400
+    mock_response.headers = {}
+    agent._graph.invoke.side_effect = BadRequestError(
+        "Failed to call a function. tool_use_failed",
+        response=mock_response,
+        body={"error": {"code": "tool_use_failed"}},
+    )
+
+    response, trace = agent.run("buscar produto")
+
+    assert response == "tool_call_error"
+    assert len(trace) == 1
+    assert trace[0].type == "final"
+    assert trace[0].content == "tool_call_error"
 
 
 def test_trace_step_serialises_and_deserialises() -> None:
