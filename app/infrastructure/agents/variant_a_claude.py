@@ -29,13 +29,14 @@ class VariantAClaude:
         db: Session,
         chroma: chromadb.ClientAPI,
         redis_client: redis_lib.Redis,
+        temperature: float = 0.0,
     ) -> None:
         self._actor_context = actor_context
         self._redis = redis_client
         self._session_token = actor_context["session_token"]
 
         tools = make_tools(actor_context, db, chroma)
-        llm = ChatAnthropic(model=_MODEL, max_tokens=4096)
+        llm = ChatAnthropic(model=_MODEL, max_tokens=4096, temperature=temperature)
         system_prompt = build_system_prompt(actor_context)
         self._graph = create_react_agent(llm, tools, prompt=system_prompt)
 
