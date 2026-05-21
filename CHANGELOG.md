@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-05-21
+- fix: polish Fase 5 — model name, retry delays, BadRequestError handling and parity tests
+- feat: Fase 5 — Variante B: agente Llama 3.1 8B via Groq API (OpenAI-compatible)
+
 ## 2026-05-20
 - feat: Fase 4 — Variante A: agente ReAct Claude (LangGraph + Anthropic)
 - docs: spec fase 4 — agente Claude via Anthropic API (LangGraph + 5 tools + trace)

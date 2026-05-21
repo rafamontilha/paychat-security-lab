@@ -1,3 +1,5 @@
+from typing import Optional
+
 from langchain_core.tools import tool
 from sqlalchemy.orm import Session
 
@@ -6,19 +8,31 @@ from app.infrastructure.persistence.models import Order, Product, Role
 
 def make_get_order_tool(actor_context: dict, db: Session):
     @tool("get_order")
-    def get_order(order_id: int) -> str:
-        """Retrieve details of a marketplace order by ID.
+    def get_order(order_id: Optional[int] = None) -> str:
+        """Retrieve details of a marketplace order.
+
+        Pass order_id to fetch a specific order. Omit (or pass 0) to retrieve
+        the user's most recent order automatically.
 
         Args:
-            order_id: The numeric ID of the order to retrieve
+            order_id: Numeric ID of the order, or 0 / omit for latest order.
         """
-        order = db.get(Order, order_id)
-        if not order:
-            return f"Order {order_id} not found."
+        if not order_id:
+            is_privileged = actor_context["role"] in (Role.admin.value, Role.support.value)
+            query = db.query(Order)
+            if not is_privileged:
+                query = query.filter(Order.buyer_id == actor_context["user_id"])
+            order = query.order_by(Order.id.desc()).first()
+            if not order:
+                return "No orders found."
+        else:
+            order = db.get(Order, order_id)
+            if not order:
+                return f"Order {order_id} not found."
 
-        is_privileged = actor_context["role"] in (Role.admin.value, Role.support.value)
-        if not is_privileged and order.buyer_id != actor_context["user_id"]:
-            return f"Access denied: order {order_id} does not belong to you."
+            is_privileged = actor_context["role"] in (Role.admin.value, Role.support.value)
+            if not is_privileged and order.buyer_id != actor_context["user_id"]:
+                return f"Access denied: order {order_id} does not belong to you."
 
         product = db.get(Product, order.product_id)
         return (
