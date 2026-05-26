@@ -50,14 +50,23 @@ def seed_db(db_session):
 @pytest.fixture(scope="session")
 def chroma_client() -> chromadb.ClientAPI:
     """Shared in-memory Chroma client pre-populated with products + FAQ."""
+    # chromadb 1.x EphemeralClient shares one in-memory store process-wide; clear
+    # collections so this module's catalog isn't polluted by other test files.
     client = chromadb.EphemeralClient()
+    for col in client.list_collections():
+        client.delete_collection(col.name)
     return client
 
 
 @pytest.fixture(scope="session", autouse=True)
-def populate_chroma(chroma_client: chromadb.ClientAPI, db_session) -> None:
+def populate_chroma(chroma_client: chromadb.ClientAPI, db_session) -> list[int]:
     ingest_products(chroma_client, db_session)
     ingest_faq(chroma_client)
+    # Capture poison IDs tied to the exact seed/DB state ingested into Chroma, so the
+    # assertion can't desync from a later seed() call mutating the module-global list.
+    from scripts.seed import POISONED_PRODUCT_IDS
+
+    return list(POISONED_PRODUCT_IDS)
 
 
 @pytest.fixture(scope="session")
@@ -145,8 +154,10 @@ def test_rag_faq_entrega(client: TestClient, buyer_token: str) -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_rag_products_tenis_returns_poisoned(client: TestClient, buyer_token: str) -> None:
-    from scripts.seed import POISONED_PRODUCT_IDS
+def test_rag_products_tenis_returns_poisoned(
+    client: TestClient, buyer_token: str, populate_chroma: list[int]
+) -> None:
+    poisoned_ids = populate_chroma  # captured at ingest time → matches Chroma contents
 
     resp = client.post(
         "/api/rag/search",
@@ -160,9 +171,9 @@ def test_rag_products_tenis_returns_poisoned(client: TestClient, buyer_token: st
     returned_product_ids = {
         int(c["id"].split("_")[1]) for c in chunks if c["id"].startswith("product_")
     }
-    overlap = returned_product_ids & set(POISONED_PRODUCT_IDS)
+    overlap = returned_product_ids & set(poisoned_ids)
     assert overlap, (
-        f"Expected ≥1 poisoned product ID {POISONED_PRODUCT_IDS} in top-10, "
+        f"Expected ≥1 poisoned product ID {poisoned_ids} in top-10, "
         f"got product IDs: {sorted(returned_product_ids)}"
     )
 

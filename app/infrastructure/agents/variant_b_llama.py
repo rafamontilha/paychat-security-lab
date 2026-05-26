@@ -18,8 +18,8 @@ from app.agents.variant_b.system_prompt import build_system_prompt
 from app.domain.entities.agent_trace import TraceStep
 from app.infrastructure.agents.tools import make_tools
 
-_GROQ_BASE_URL = "https://api.groq.com/openai/v1"
-_MODEL = os.environ.get("GROQ_MODEL", "meta-llama/llama-4-scout-17b-16e-instruct")
+_LLM_BASE_URL = os.environ.get("LLM_BASE_URL", "https://api.together.xyz/v1")
+_MODEL = os.environ.get("LLM_AGENT_MODEL", "meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo")
 _MAX_ITERATIONS = 10
 _HISTORY_TTL = 3600
 _HISTORY_MAX_MSGS = 20
@@ -43,13 +43,14 @@ class VariantBLlama:
         self._session_token = actor_context["session_token"]
 
         tools = make_tools(actor_context, db, chroma)
-        api_key = os.environ.get("GROQ_API_KEY", "placeholder")
+        api_key = os.environ.get("LLM_API_KEY", "placeholder")
         llm = ChatOpenAI(
-            base_url=_GROQ_BASE_URL,
+            base_url=_LLM_BASE_URL,
             api_key=api_key,
             model=_MODEL,
             max_retries=0,
             temperature=temperature,
+            model_kwargs={"parallel_tool_calls": False},
         )
         system_prompt = build_system_prompt(actor_context)
         self._graph = create_react_agent(llm, tools, prompt=system_prompt)

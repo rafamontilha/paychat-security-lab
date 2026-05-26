@@ -11,6 +11,7 @@ services:
       DATABASE_URL: postgresql://postgres:postgres@db:5432/paychat
       REDIS_URL: redis://redis:6379
       CHROMA_URL: http://chroma:8000
+      PRESIDIO_URL: http://host.docker.internal:3000
     depends_on:
       db:
         condition: service_healthy
@@ -18,9 +19,7 @@ services:
         condition: service_started
       chroma:
         condition: service_started
-    volumes:
-      - .:/app
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    command: /app/.venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000
 
   db:
     image: postgres:16

@@ -243,7 +243,12 @@ def ingest_poisoned_products(chroma_client: chromadb.ClientAPI) -> int:
         )
 
     embeddings = embed(documents)
-    collection.upsert(ids=ids, documents=documents, embeddings=embeddings, metadatas=metadatas)
+    collection.upsert(
+        ids=ids,
+        documents=documents,
+        embeddings=embeddings,  # type: ignore[arg-type]
+        metadatas=metadatas,  # type: ignore[arg-type]
+    )
     return len(ids)
 
 

@@ -15,12 +15,6 @@ from fastapi.testclient import TestClient
 from app.domain.entities.agent_trace import TraceStep
 from app.infrastructure.defenses.llama_guard import (
     GuardBlockedError,
-    GuardVerdict,
-)
-from app.infrastructure.defenses.presidio import (
-    PresidioFinding,
-    PresidioUnavailableError,
-    RedactionResult,
 )
 from app.infrastructure.persistence.database import get_db
 from app.infrastructure.rag.client import get_chroma_client
@@ -77,7 +71,9 @@ def test_benign_message_passes_all_three_stages(client) -> None:
     """Mensagem benigna passa pelos 3 estágios e retorna resposta normal com trace completo."""
     agent_trace = [
         TraceStep(type="tool_call", content="Calling search_products", tool_name="search_products"),
-        TraceStep(type="tool_return", content="3 produtos encontrados", tool_name="search_products"),
+        TraceStep(
+            type="tool_return", content="3 produtos encontrados", tool_name="search_products"
+        ),
         TraceStep(type="final", content="Encontrei estes tênis para você."),
     ]
     mock_pipeline = MagicMock()
@@ -105,7 +101,8 @@ def test_benign_message_passes_all_three_stages(client) -> None:
 
 
 def test_jailbreak_prompt_blocked_by_guard_returns_400(client) -> None:
-    """'ignore previous instructions' é bloqueado no estágio 1 com 400 e trace só com guard_verdict."""
+    """'ignore previous instructions' é bloqueado no estágio 1 com 400 e trace
+    só com guard_verdict."""
     mock_pipeline = MagicMock()
     mock_pipeline.run.side_effect = GuardBlockedError(category="S2", raw_response="unsafe\nS2")
 
@@ -135,7 +132,8 @@ def test_jailbreak_prompt_blocked_by_guard_returns_400(client) -> None:
 
 
 def test_pii_in_output_is_redacted_by_presidio(client) -> None:
-    """Output que conteria CPF retorna com <REDACTED:BR_CPF>; trace preserva o dado original no agent_trace."""
+    """Output que conteria CPF retorna com <REDACTED:BR_CPF>; trace preserva o dado
+    original no agent_trace."""
     original_response = "user_id=1 name=João role=admin email=joao@test.com cpf=123.456.789-09"
     redacted_response = "user_id=1 name=João role=admin email=joao@test.com cpf=<REDACTED:BR_CPF>"
 

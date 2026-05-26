@@ -11,12 +11,11 @@ import redis as redis_lib
 from openai import RateLimitError
 
 from app.infrastructure.agents.variant_b_llama import (
-    _GROQ_BASE_URL,
+    _LLM_BASE_URL,
     _MODEL,
     _RETRY_DELAYS,
     _invoke_with_retry,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -40,7 +39,7 @@ def _fake_actor(session_token: str = "t") -> dict:
 
 
 def test_groq_base_url_constant() -> None:
-    assert _GROQ_BASE_URL == "https://api.groq.com/openai/v1"
+    assert _LLM_BASE_URL == "https://api.together.xyz/v1"
 
 
 def test_groq_model_constant() -> None:
@@ -68,7 +67,7 @@ def test_client_instantiated_with_correct_params() -> None:
         )
 
         kwargs = MockLLM.call_args.kwargs
-        assert kwargs["base_url"] == _GROQ_BASE_URL
+        assert kwargs["base_url"] == _LLM_BASE_URL
         assert kwargs["model"] == _MODEL
         assert kwargs["max_retries"] == 0
 

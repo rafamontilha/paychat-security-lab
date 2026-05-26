@@ -46,7 +46,12 @@ def seed_db(db_session):
 
 @pytest.fixture
 def chroma() -> chromadb.ClientAPI:
-    return chromadb.EphemeralClient()
+    # chromadb 1.x EphemeralClient shares one in-memory store process-wide, so
+    # clear collections to isolate this test from others that also ingest.
+    client = chromadb.EphemeralClient()
+    for col in client.list_collections():
+        client.delete_collection(col.name)
+    return client
 
 
 # ---------------------------------------------------------------------------

@@ -140,7 +140,7 @@ Cada fase entrega uma capacidade testável. As fases são dimensionadas para 1�
 - **Apêndice white-box (GPT-2 small):** scripts em `red_team/whitebox/` que rodam GCG (sufixo adversarial) e MIA simplificado contra GPT-2 carregado via Transformers; resultados separados em `evidence/whitebox/`
 - Notebook `notebooks/02_baseline_complete.ipynb` consolida toda a matriz 3×6 baseline + apêndice white-box
 
-**Done when:** matriz 3×6 baseline completa com pelo menos 30 evidências por célula; apêndice white-box mostra GCG funcionando em GPT-2 (sufixo encontrado, exemplo de bypass); notebook exporta tabela em CSV para uso no relatório.
+**Done when:** matriz 3×6 baseline completa com pelo menos 30 evidências por célula; apêndice white-box mostra GCG funcionando em GPT-2 (sufixo encontrado, exemplo de bypass); notebook exporta tabela em CSV para uso no relatório.talvez
 
 ---
 

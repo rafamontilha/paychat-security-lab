@@ -1,13 +1,14 @@
 """Integration tests for VariantCPipeline orchestration — no real APIs needed (all mocked).
 
 Covers:
-- Happy path: all three stages execute and trace contains guard_verdict + agent steps + presidio_findings
+- Happy path: all three stages execute and trace contains
+  guard_verdict + agent steps + presidio_findings
 - Guard timeout → PresidioUnavailableError NOT raised; GuardUnavailableError → HTTP 503 from router
 - Presidio down → PresidioUnavailableError propagates (router returns 503)
 - Guard blocks → GuardBlockedError raised before stage 2 is invoked
 """
 
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -24,7 +25,9 @@ from app.infrastructure.defenses.presidio import (
 )
 
 
-def _make_pipeline(guard_verdict: GuardVerdict, agent_result: tuple, presidio_result: RedactionResult):
+def _make_pipeline(
+    guard_verdict: GuardVerdict, agent_result: tuple, presidio_result: RedactionResult
+):
     """Build a VariantCPipeline with all three stages mocked."""
     from app.infrastructure.agents.variant_c_pipeline import VariantCPipeline
 
@@ -118,7 +121,9 @@ def test_guard_block_raises_guard_blocked_error_and_skips_agent() -> None:
         patch("app.infrastructure.agents.variant_c_pipeline.PresidioClient") as MockPresidio,
     ):
         mock_guard = MagicMock()
-        mock_guard.classify_input.return_value = GuardVerdict(safe=False, category="S2", raw_response="unsafe\nS2")
+        mock_guard.classify_input.return_value = GuardVerdict(
+            safe=False, category="S2", raw_response="unsafe\nS2"
+        )
         MockGuard.return_value = mock_guard
 
         mock_agent = MagicMock()
@@ -207,7 +212,13 @@ def test_payment_token_in_response_blocks_output() -> None:
         presidio_result=RedactionResult(
             redacted_text="[RESPOSTA BLOQUEADA: informação sensível detectada no output do agente]",
             findings=[
-                PresidioFinding(entity_type="PAYMENT_TOKEN", start=7, end=26, score=1.0, text="1234-5678-9012-3456")
+                PresidioFinding(
+                    entity_type="PAYMENT_TOKEN",
+                    start=7,
+                    end=26,
+                    score=1.0,
+                    text="1234-5678-9012-3456",
+                )
             ],
             blocked=True,
         ),
