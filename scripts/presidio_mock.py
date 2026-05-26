@@ -40,13 +40,15 @@ def analyze(req: AnalyzeRequest) -> list[dict[str, Any]]:
         if entity_type not in entities:
             continue
         for match in pattern.finditer(req.text):
-            results.append({
-                "entity_type": entity_type,
-                "start": match.start(),
-                "end": match.end(),
-                "score": 0.85,
-                "recognition_metadata": {"recognizer_name": "MockRecognizer"},
-            })
+            results.append(
+                {
+                    "entity_type": entity_type,
+                    "start": match.start(),
+                    "end": match.end(),
+                    "score": 0.85,
+                    "recognition_metadata": {"recognizer_name": "MockRecognizer"},
+                }
+            )
     return results
 
 

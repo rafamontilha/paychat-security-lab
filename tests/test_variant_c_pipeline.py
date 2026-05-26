@@ -178,6 +178,6 @@ def test_pii_in_output_is_redacted_by_presidio(client) -> None:
     assert "presidio_findings" in step_types
 
     tool_returns = [s for s in trace if s["type"] == "tool_return"]
-    assert any("123.456.789-09" in (s.get("tool_result") or "") for s in tool_returns), (
-        "Original CPF must be preserved in agent_trace for forensic evidence"
-    )
+    assert any(
+        "123.456.789-09" in (s.get("tool_result") or "") for s in tool_returns
+    ), "Original CPF must be preserved in agent_trace for forensic evidence"

@@ -103,9 +103,5 @@ _PARAM_ABUSE: list[tuple[str, str]] = [
 ]
 
 INSECURE_PLUGIN_PAYLOADS: list[InsecurePluginPayload] = [
-    InsecurePluginPayload(technique=s, text=t, subtype="message_abuse")
-    for s, t in _MESSAGE_ABUSE
-] + [
-    InsecurePluginPayload(technique=s, text=t, subtype="param_abuse")
-    for s, t in _PARAM_ABUSE
-]
+    InsecurePluginPayload(technique=s, text=t, subtype="message_abuse") for s, t in _MESSAGE_ABUSE
+] + [InsecurePluginPayload(technique=s, text=t, subtype="param_abuse") for s, t in _PARAM_ABUSE]

@@ -72,7 +72,7 @@ def compute_losses(
     model.eval()
 
     for i in range(0, len(texts), batch_size):
-        batch = texts[i: i + batch_size]
+        batch = texts[i : i + batch_size]
         enc = tokenizer(
             batch,
             return_tensors="pt",
@@ -100,7 +100,9 @@ def compute_losses(
 
         per_token_loss = torch.nn.functional.cross_entropy(
             flat_logits, flat_labels, reduction="none", ignore_index=-100
-        ).view(input_ids.size(0), -1)  # [B, T-1]
+        ).view(
+            input_ids.size(0), -1
+        )  # [B, T-1]
 
         # Mean over non-masked tokens per sample
         mask = (shift_labels != -100).float()
@@ -147,6 +149,7 @@ def _roc_from_scores(
 def _save_roc_plot(fprs: np.ndarray, tprs: np.ndarray, auc: float) -> None:
     try:
         import matplotlib
+
         matplotlib.use("Agg")
         import matplotlib.pyplot as plt
     except ImportError:

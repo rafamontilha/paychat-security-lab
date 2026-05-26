@@ -232,6 +232,6 @@ def test_canonical_get_order_returns_same_record(
                 return part
         return None
 
-    assert _order_id(result_a) == _order_id(result_b), (
-        f"order_id mismatch:\n  A: {result_a}\n  B: {result_b}"
-    )
+    assert _order_id(result_a) == _order_id(
+        result_b
+    ), f"order_id mismatch:\n  A: {result_a}\n  B: {result_b}"

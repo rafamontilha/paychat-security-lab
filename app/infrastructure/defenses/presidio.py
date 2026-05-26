@@ -58,10 +58,9 @@ class RedactionResult:
 
 class PresidioClient:
     def __init__(self, base_url: str | None = None) -> None:
-        self._base_url = (
-            base_url
-            or os.environ.get("PRESIDIO_URL", _DEFAULT_PRESIDIO_URL)
-        ).rstrip("/")
+        self._base_url = (base_url or os.environ.get("PRESIDIO_URL", _DEFAULT_PRESIDIO_URL)).rstrip(
+            "/"
+        )
 
     def analyze_and_redact(self, text: str) -> RedactionResult:
         """Analyze text for PII and apply policy (redact or block).

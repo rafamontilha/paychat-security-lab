@@ -91,8 +91,9 @@ async def test_resume_does_not_duplicate(tmp_path: Path) -> None:
         _fake_path(record.id).write_text(record.model_dump_json(indent=2), encoding="utf-8")
 
     # Mock HTTP client: _run_one returns a canned success for each task
-    async def _fake_run_one(client, api_key, variant, category, technique, payload_text,
-                             temperature, run_index, timeout):
+    async def _fake_run_one(
+        client, api_key, variant, category, technique, payload_text, temperature, run_index, timeout
+    ):
         return {
             "id": EvidenceRecord.make_id(
                 variant, category, technique, payload_text, temperature, run_index
@@ -182,10 +183,12 @@ async def test_resume_with_all_present_skips_all(tmp_path: Path) -> None:
 
     # Pre-write the evidence file
     existing_id = EvidenceRecord.make_id(
-        "a", "pi_direct",
+        "a",
+        "pi_direct",
         PI_DIRECT_PAYLOADS[0].technique,
         PI_DIRECT_PAYLOADS[0].full_text,
-        0.0, 0,
+        0.0,
+        0,
     )
     existing_record = EvidenceRecord(
         id=existing_id,

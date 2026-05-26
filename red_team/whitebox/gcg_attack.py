@@ -85,8 +85,8 @@ def _compute_token_gradients(
     suffix_embeds = (one_hot @ model.transformer.wte.weight).unsqueeze(0)  # [1, S, D]
 
     with torch.no_grad():
-        prefix_embeds = model.transformer.wte(inst_ids)    # [1, T_i, D]
-        target_embeds = model.transformer.wte(tgt_ids)     # [1, T_t, D]
+        prefix_embeds = model.transformer.wte(inst_ids)  # [1, T_i, D]
+        target_embeds = model.transformer.wte(tgt_ids)  # [1, T_t, D]
 
     full_embeds = torch.cat([prefix_embeds, suffix_embeds, target_embeds], dim=1)  # [1, T, D]
 
@@ -95,7 +95,7 @@ def _compute_token_gradients(
     T_total = T_i + suffix_len + T_t
 
     labels = torch.full((1, T_total), -100, dtype=torch.long, device=device)
-    labels[0, T_i + suffix_len:] = tgt_ids[0]
+    labels[0, T_i + suffix_len :] = tgt_ids[0]
 
     loss = model(inputs_embeds=full_embeds, labels=labels).loss
     loss.backward()
@@ -125,14 +125,18 @@ def _evaluate_candidates_batched(
         logits = model(input_ids=cand_input_ids).logits  # [B, T_total, V]
 
     # Loss only on target tokens: next-token prediction at positions T_i+S-1 .. T_i+S+T_t-2
-    shift_logits = logits[:, T_i + suffix_len - 1: T_i + suffix_len + T_t - 1, :]  # [B, T_t, V]
+    shift_logits = logits[:, T_i + suffix_len - 1 : T_i + suffix_len + T_t - 1, :]  # [B, T_t, V]
     shift_labels = batch_tgt  # [B, T_t]
 
-    per_sample = F.cross_entropy(
-        shift_logits.reshape(-1, vocab_size),
-        shift_labels.reshape(-1),
-        reduction="none",
-    ).reshape(batch_size, -1).mean(dim=-1)  # [B]
+    per_sample = (
+        F.cross_entropy(
+            shift_logits.reshape(-1, vocab_size),
+            shift_labels.reshape(-1),
+            reduction="none",
+        )
+        .reshape(batch_size, -1)
+        .mean(dim=-1)
+    )  # [B]
 
     return per_sample
 
@@ -162,9 +166,9 @@ def gcg_attack(
     torch.manual_seed(seed)
 
     # Tokenize — no special tokens so concatenation is explicit
-    inst_ids = tokenizer(
-        instruction, return_tensors="pt", add_special_tokens=False
-    ).input_ids.to(device)
+    inst_ids = tokenizer(instruction, return_tensors="pt", add_special_tokens=False).input_ids.to(
+        device
+    )
     tgt_ids = tokenizer(target, return_tensors="pt", add_special_tokens=False).input_ids.to(device)
 
     # Initialise suffix randomly over printable ASCII tokens (heuristically filtered)
@@ -204,7 +208,7 @@ def gcg_attack(
             out = model.generate(
                 gen_ids, max_new_tokens=20, do_sample=False, pad_token_id=tokenizer.eos_token_id
             )
-        gen_text = tokenizer.decode(out[0][gen_ids.shape[1]:])
+        gen_text = tokenizer.decode(out[0][gen_ids.shape[1] :])
         if any(marker.lower() in gen_text.lower() for marker in ATTACK_SUCCESS_MARKERS):
             success = True
             if verbose:
@@ -275,15 +279,17 @@ def run_gcg_pipeline(
                 do_sample=False,
                 pad_token_id=tokenizer.eos_token_id,
             )
-        gen_text = tokenizer.decode(out[0][input_ids.shape[1]:], skip_special_tokens=True)
+        gen_text = tokenizer.decode(out[0][input_ids.shape[1] :], skip_special_tokens=True)
         hit = any(marker.lower() in gen_text.lower() for marker in ATTACK_SUCCESS_MARKERS)
         if hit:
             successes += 1
-        probe_results.append({
-            "prompt": prompt,
-            "generation": gen_text[:200],
-            "success": hit,
-        })
+        probe_results.append(
+            {
+                "prompt": prompt,
+                "generation": gen_text[:200],
+                "success": hit,
+            }
+        )
         print(f"  prompt={prompt[:50]!r}  hit={hit}  gen={gen_text[:60]!r}")
 
     attack_success = successes >= ATTACK_SUCCESS_THRESHOLD
