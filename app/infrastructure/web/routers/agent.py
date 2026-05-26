@@ -109,7 +109,7 @@ def agent_chat(
         )
 
     try:
-        response, trace = agent.run(body.message)  # type: ignore[union-attr]
+        response, trace = agent.run(body.message)  # type: ignore[attr-defined]
     except GuardBlockedError as exc:
         guard_trace = [
             TraceStep(
