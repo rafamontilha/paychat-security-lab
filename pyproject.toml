@@ -38,7 +38,7 @@ redteam = [
     "ipykernel>=6.0",
 ]
 rag = [
-    "chromadb==0.5.*",
+    "chromadb==1.5.*",
     "sentence-transformers",
 ]
 whitebox = [

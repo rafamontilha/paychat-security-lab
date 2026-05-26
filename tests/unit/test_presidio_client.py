@@ -16,7 +16,6 @@ import pytest
 from app.infrastructure.defenses.policy import ENTITY_POLICY
 from app.infrastructure.defenses.presidio import (
     PresidioClient,
-    PresidioFinding,
     PresidioUnavailableError,
 )
 
@@ -79,7 +78,10 @@ def test_payment_token_in_text_triggers_block(client) -> None:
         result = client.analyze_and_redact(text)
 
     assert result.blocked is True
-    assert result.redacted_text == "[RESPOSTA BLOQUEADA: informação sensível detectada no output do agente]"
+    assert (
+        result.redacted_text
+        == "[RESPOSTA BLOQUEADA: informação sensível detectada no output do agente]"
+    )
 
 
 def test_internal_secret_in_text_triggers_block(client) -> None:

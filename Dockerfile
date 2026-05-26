@@ -5,7 +5,7 @@ WORKDIR /app
 RUN pip install uv
 
 COPY pyproject.toml .
-RUN uv sync --no-group whitebox
+RUN uv sync --extra rag --extra agent
 
 COPY . .
 

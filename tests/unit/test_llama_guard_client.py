@@ -7,7 +7,6 @@ from openai import APIConnectionError, APITimeoutError
 
 from app.infrastructure.defenses.llama_guard import (
     GuardUnavailableError,
-    GuardVerdict,
     LlamaGuardClient,
 )
 
@@ -64,7 +63,7 @@ def test_unsafe_without_category_line(MockOpenAI) -> None:
     verdict = c.classify_input("some harmful text")
 
     assert verdict.safe is False
-    assert verdict.category is None
+    assert verdict.category == "unknown"
 
 
 @patch("app.infrastructure.defenses.llama_guard.OpenAI")

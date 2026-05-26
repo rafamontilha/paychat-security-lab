@@ -1,0 +1,10 @@
+.venv/
+evidence/
+.claude/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.git/
+notebooks/
+specs/

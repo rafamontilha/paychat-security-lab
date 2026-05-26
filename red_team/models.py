@@ -15,7 +15,10 @@ class EvidenceRecord(BaseModel):
     id: str
     timestamp: str = Field(default_factory=_now_iso)
     variant: Literal["a", "b", "c"]
-    category: Literal["pi_direct", "pi_indirect", "ioh"]
+    category: Literal[
+        "pi_direct", "pi_indirect", "ioh",
+        "model_theft", "sensitive_disclosure", "insecure_plugin", "excessive_agency",
+    ]
     technique: str
     payload: str
     temperature: float
@@ -25,6 +28,7 @@ class EvidenceRecord(BaseModel):
     success_reason: str
     execution_status: Literal["success", "error", "max_iterations"]
     trace: list[dict[str, Any]]
+    metadata: dict[str, Any] = Field(default_factory=dict)
 
     @staticmethod
     def make_id(

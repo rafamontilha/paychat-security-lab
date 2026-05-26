@@ -21,6 +21,8 @@ htmlcov/
 evidence/baseline/
 evidence/post_defense/
 evidence/whitebox/
+evidence/surrogate/
+evidence/_archive_groq_b_baseline/
 chroma_data/
 *.db
 *.sqlite3

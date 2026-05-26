@@ -70,6 +70,10 @@ class VariantCPipeline:
         trace.extend(agent_trace)
 
         # --- Stage 3: Presidio output filter ---
+        # Fail-closed: if Presidio is unavailable, PresidioUnavailableError propagates
+        # to the router (HTTP 503) rather than returning an unredacted response. This
+        # prevents PII leakage when the redaction layer is down, consistent with the
+        # guard stage. Same posture for both defense stages.
         redaction: RedactionResult = self._presidio.analyze_and_redact(agent_response)
         trace.append(
             TraceStep(
@@ -86,5 +90,4 @@ class VariantCPipeline:
                 ],
             )
         )
-
         return redaction.redacted_text, trace

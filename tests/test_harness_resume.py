@@ -10,15 +10,12 @@ No network calls are made — the HTTP client is mocked.
 
 from __future__ import annotations
 
-import asyncio
-import json
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
 from red_team.models import EvidenceRecord
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -27,7 +24,9 @@ from red_team.models import EvidenceRecord
 
 def _make_raw_result(variant: str, category: str, technique: str, temp: float, run: int) -> dict:
     return {
-        "id": EvidenceRecord.make_id(variant, category, technique, f"payload_{technique}", temp, run),
+        "id": EvidenceRecord.make_id(
+            variant, category, technique, f"payload_{technique}", temp, run
+        ),
         "variant": variant,
         "category": category,
         "technique": technique,
@@ -95,7 +94,9 @@ async def test_resume_does_not_duplicate(tmp_path: Path) -> None:
     async def _fake_run_one(client, api_key, variant, category, technique, payload_text,
                              temperature, run_index, timeout):
         return {
-            "id": EvidenceRecord.make_id(variant, category, technique, payload_text, temperature, run_index),
+            "id": EvidenceRecord.make_id(
+                variant, category, technique, payload_text, temperature, run_index
+            ),
             "variant": variant,
             "category": category,
             "technique": technique,
