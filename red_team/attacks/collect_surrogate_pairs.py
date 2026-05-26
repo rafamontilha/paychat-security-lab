@@ -114,42 +114,49 @@ def _build_query_pool() -> list[str]:
     # Import payload catalogs (safe — only reading .text attributes)
     try:
         from red_team.payloads.prompt_injection_direct import PI_DIRECT_PAYLOADS
+
         queries.extend(p.full_text for p in PI_DIRECT_PAYLOADS)
     except Exception:
         pass
 
     try:
         from red_team.payloads.prompt_injection_indirect import PI_INDIRECT_PAYLOADS
+
         queries.extend(p.trigger_query for p in PI_INDIRECT_PAYLOADS)
     except Exception:
         pass
 
     try:
         from red_team.payloads.insecure_output_handling import IOH_PAYLOADS
+
         queries.extend(p.text for p in IOH_PAYLOADS)
     except Exception:
         pass
 
     try:
         from red_team.techniques.model_theft import MODEL_THEFT_PAYLOADS
+
         queries.extend(p.text for p in MODEL_THEFT_PAYLOADS)
     except Exception:
         pass
 
     try:
         from red_team.techniques.sensitive_disclosure import SENSITIVE_DISCLOSURE_PAYLOADS
+
         queries.extend(p.text for p in SENSITIVE_DISCLOSURE_PAYLOADS)
     except Exception:
         pass
 
     try:
         from red_team.techniques.insecure_plugin import INSECURE_PLUGIN_PAYLOADS
+
         queries.extend(p.text for p in INSECURE_PLUGIN_PAYLOADS)
     except Exception:
         pass
 
     try:
         from red_team.techniques.excessive_agency import EXCESSIVE_AGENCY_PAYLOADS
+
         queries.extend(p.text for p in EXCESSIVE_AGENCY_PAYLOADS)
     except Exception:
         pass

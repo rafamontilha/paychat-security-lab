@@ -50,9 +50,7 @@ MAX_SEQ_LEN = 256
 def _load_pairs(variant: str) -> list[dict[str, str]]:
     path = SURROGATE_DIR / variant / "pairs.jsonl"
     if not path.exists():
-        raise FileNotFoundError(
-            f"No pairs found at {path}. Run collect_surrogate_pairs.py first."
-        )
+        raise FileNotFoundError(f"No pairs found at {path}. Run collect_surrogate_pairs.py first.")
     pairs: list[dict[str, str]] = []
     for line in path.read_text(encoding="utf-8").splitlines():
         try:
@@ -150,16 +148,16 @@ def _compute_agreement(
 
     for pair in holdout:
         prompt = "Query: " + pair["query"] + "\nResponse: "
-        enc = tokenizer(
-            prompt, return_tensors="pt", truncation=True, max_length=MAX_SEQ_LEN
-        ).to(device)
+        enc = tokenizer(prompt, return_tensors="pt", truncation=True, max_length=MAX_SEQ_LEN).to(
+            device
+        )
         out = model.generate(
             enc["input_ids"],
             max_new_tokens=max_new_tokens,
             do_sample=False,
             pad_token_id=tokenizer.eos_token_id,
         )
-        gen = tokenizer.decode(out[0][enc["input_ids"].shape[1]:], skip_special_tokens=True)
+        gen = tokenizer.decode(out[0][enc["input_ids"].shape[1] :], skip_special_tokens=True)
 
         # Loose agreement: ≥1 meaningful word overlap (≥4 chars)
         oracle_words = {w.lower() for w in pair["response"].split() if len(w) >= 4}

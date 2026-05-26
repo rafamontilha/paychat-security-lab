@@ -62,8 +62,13 @@ _EVIDENCE_DIR = Path("evidence/baseline")
 _DRY_RUN_REPORT = _EVIDENCE_DIR / "_dry_run_report.md"
 
 _ALL_CATEGORIES = [
-    "pi_direct", "pi_indirect", "ioh",
-    "model_theft", "sensitive_disclosure", "insecure_plugin", "excessive_agency",
+    "pi_direct",
+    "pi_indirect",
+    "ioh",
+    "model_theft",
+    "sensitive_disclosure",
+    "insecure_plugin",
+    "excessive_agency",
 ]
 
 _RUNS_PER_TEMP: dict[str, int] = {
@@ -71,10 +76,10 @@ _RUNS_PER_TEMP: dict[str, int] = {
     "pi_indirect": 3,
     "ioh": 2,
     # Fase 8 — enough runs to reach ≥30 evidence per (variant, category)
-    "model_theft": 1,           # 60 payloads × 1 run × 2 temps = 120 per variant
+    "model_theft": 1,  # 60 payloads × 1 run × 2 temps = 120 per variant
     "sensitive_disclosure": 2,  # 20 payloads × 2 runs × 2 temps = 80 per variant
-    "insecure_plugin": 1,       # ~35 payloads × 1 run × 2 temps = 70 per variant
-    "excessive_agency": 2,      # 20 payloads × 2 runs × 2 temps = 80 per variant
+    "insecure_plugin": 1,  # ~35 payloads × 1 run × 2 temps = 70 per variant
+    "excessive_agency": 2,  # 20 payloads × 2 runs × 2 temps = 80 per variant
 }
 
 _TEMPERATURES = [0.0, 0.7]
@@ -128,8 +133,16 @@ async def _run_one(
             try:
                 session_token = await _login(client, api_key)
             except Exception as exc:
-                return _error_result(evidence_id, variant, category, technique,
-                                     payload_text, temperature, run_index, str(exc))
+                return _error_result(
+                    evidence_id,
+                    variant,
+                    category,
+                    technique,
+                    payload_text,
+                    temperature,
+                    run_index,
+                    str(exc),
+                )
 
             last_response = ""
             last_trace: list[dict] = []
@@ -155,12 +168,14 @@ async def _run_one(
                         turn_status = "success"
                     elif resp.status_code == 503:
                         last_status = "error"
-                        full_conversation.append({
-                            "turn": msg_index + 1,
-                            "message": message,
-                            "response": "",
-                            "error": f"503: {resp.text[:100]}",
-                        })
+                        full_conversation.append(
+                            {
+                                "turn": msg_index + 1,
+                                "message": message,
+                                "response": "",
+                                "error": f"503: {resp.text[:100]}",
+                            }
+                        )
                         break
                     else:
                         resp.raise_for_status()
@@ -168,27 +183,32 @@ async def _run_one(
                         turn_response = data.get("response", "")
                         turn_trace = data.get("trace", [])
                         turn_status = (
-                            "max_iterations" if turn_response == "max_iterations_reached"
+                            "max_iterations"
+                            if turn_response == "max_iterations_reached"
                             else "success"
                         )
                         last_status = turn_status
 
                     last_response = turn_response
                     last_trace = turn_trace
-                    full_conversation.append({
-                        "turn": msg_index + 1,
-                        "message": message,
-                        "response": turn_response,
-                    })
+                    full_conversation.append(
+                        {
+                            "turn": msg_index + 1,
+                            "message": message,
+                            "response": turn_response,
+                        }
+                    )
 
                 except (httpx.TimeoutException, httpx.ConnectError) as exc:
                     last_status = "error"
-                    full_conversation.append({
-                        "turn": msg_index + 1,
-                        "message": message,
-                        "response": "",
-                        "error": str(exc)[:200],
-                    })
+                    full_conversation.append(
+                        {
+                            "turn": msg_index + 1,
+                            "message": message,
+                            "response": "",
+                            "error": str(exc)[:200],
+                        }
+                    )
                     break
 
             result: dict[str, Any] = {
@@ -301,9 +321,7 @@ def _evidence_path(evidence_id: str) -> Path:
 
 
 def _persist(record: EvidenceRecord) -> None:
-    _evidence_path(record.id).write_text(
-        record.model_dump_json(indent=2), encoding="utf-8"
-    )
+    _evidence_path(record.id).write_text(record.model_dump_json(indent=2), encoding="utf-8")
 
 
 def _exists(evidence_id: str) -> bool:
@@ -333,16 +351,18 @@ def _build_tasks(
     ) -> None:
         runs = _RUNS_PER_TEMP[category]
         for run_index in range(runs):
-            tasks.append({
-                "variant": variant,
-                "category": category,
-                "technique": technique,
-                "payload_text": payload_text,
-                "canary": canary,
-                "temperature": temperature,
-                "run_index": run_index,
-                "turns": turns,
-            })
+            tasks.append(
+                {
+                    "variant": variant,
+                    "category": category,
+                    "technique": technique,
+                    "payload_text": payload_text,
+                    "canary": canary,
+                    "temperature": temperature,
+                    "run_index": run_index,
+                    "turns": turns,
+                }
+            )
 
     for v in variants:
         for temp in temperatures:
@@ -383,8 +403,15 @@ def _build_tasks(
                     _add(v, "excessive_agency", pca.technique, pca.text, "", temp)
                 for plc in LOGIC_CHAIN_PAYLOADS:
                     turn_list = list(plc.turns)
-                    _add(v, "excessive_agency", plc.technique, plc.final_turn, "", temp,
-                         turns=turn_list)
+                    _add(
+                        v,
+                        "excessive_agency",
+                        plc.technique,
+                        plc.final_turn,
+                        "",
+                        temp,
+                        turns=turn_list,
+                    )
 
     return tasks
 
@@ -415,11 +442,16 @@ async def run(
 
     if resume:
         pending = [
-            t for t in tasks
+            t
+            for t in tasks
             if not _exists(
                 EvidenceRecord.make_id(
-                    t["variant"], t["category"], t["technique"],
-                    t["payload_text"], t["temperature"], t["run_index"],
+                    t["variant"],
+                    t["category"],
+                    t["technique"],
+                    t["payload_text"],
+                    t["temperature"],
+                    t["run_index"],
                 )
             )
         ]
@@ -453,11 +485,19 @@ async def run(
         if isinstance(result, BaseException):
             raw: dict[str, Any] = _error_result(
                 EvidenceRecord.make_id(
-                    task["variant"], task["category"], task["technique"],
-                    task["payload_text"], task["temperature"], task["run_index"],
+                    task["variant"],
+                    task["category"],
+                    task["technique"],
+                    task["payload_text"],
+                    task["temperature"],
+                    task["run_index"],
                 ),
-                task["variant"], task["category"], task["technique"],
-                task["payload_text"], task["temperature"], task["run_index"],
+                task["variant"],
+                task["category"],
+                task["technique"],
+                task["payload_text"],
+                task["temperature"],
+                task["run_index"],
                 str(result)[:200],
             )
             success_flag, success_reason = False, "exception"

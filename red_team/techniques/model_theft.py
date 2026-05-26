@@ -155,9 +155,7 @@ _EXTRACTION: list[tuple[str, str]] = [
 # ---------------------------------------------------------------------------
 
 MODEL_THEFT_PAYLOADS: list[ModelTheftPayload] = [
-    ModelTheftPayload(technique=slug, text=text, subtype="probing")
-    for slug, text in _PROBING
+    ModelTheftPayload(technique=slug, text=text, subtype="probing") for slug, text in _PROBING
 ] + [
-    ModelTheftPayload(technique=slug, text=text, subtype="extraction")
-    for slug, text in _EXTRACTION
+    ModelTheftPayload(technique=slug, text=text, subtype="extraction") for slug, text in _EXTRACTION
 ]

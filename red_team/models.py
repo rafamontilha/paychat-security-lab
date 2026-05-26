@@ -16,8 +16,13 @@ class EvidenceRecord(BaseModel):
     timestamp: str = Field(default_factory=_now_iso)
     variant: Literal["a", "b", "c"]
     category: Literal[
-        "pi_direct", "pi_indirect", "ioh",
-        "model_theft", "sensitive_disclosure", "insecure_plugin", "excessive_agency",
+        "pi_direct",
+        "pi_indirect",
+        "ioh",
+        "model_theft",
+        "sensitive_disclosure",
+        "insecure_plugin",
+        "excessive_agency",
     ]
     technique: str
     payload: str

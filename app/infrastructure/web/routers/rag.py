@@ -53,7 +53,7 @@ def rag_search(
     )
 
     ids: list[str] = results["ids"][0] if results["ids"] else []
-    documents: list[str | None] = (results["documents"] or [[]])[0]
+    documents: list[str | None] = (results["documents"] or [[]])[0]  # type: ignore[assignment]
     metadatas: list[dict | None] = (results["metadatas"] or [[]])[0]  # type: ignore[assignment]
     distances: list[float | None] = (results["distances"] or [[]])[0]  # type: ignore[assignment]
 
