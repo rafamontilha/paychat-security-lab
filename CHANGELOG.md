@@ -1,6 +1,9 @@
 # Changelog
 
 ## 2026-05-26
+- fix(ci): destrava pipeline — black em 16 arquivos das Fases 6-8 corrige o gate `black --check` que falhava no job quality (primeiro CI verde do histórico)
+- chore: hook de pre-commit (black + ruff via `uv run`) espelhando o job quality, evita reincidência de código não formatado
+- fix: corrige `type:ignore` com código errado em agent.py (`[union-attr]`→`[attr-defined]`) e supressão consistente em rag.py
 - fix: Variante C estágio 3 fail-closed — Presidio indisponível propaga HTTP 503 (sem vazar PII), consistente com o guard
 - fix: chromadb 0.5.*→1.5.* corrige KeyError('_type') na busca; ingest_poisoned_products como setup de pi_indirect
 - fix: 24 erros de ruff + 17 de mypy em red_team/ (vars de loop, BaseException no gather, type:ignore stubs chromadb)
