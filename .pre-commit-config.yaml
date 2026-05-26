@@ -1,0 +1,16 @@
+# Espelha o job `quality` do CI (.github/workflows/ci.yml).
+# Versoes das ferramentas vem do pyproject.toml (fonte unica) via `uv run`.
+# Instalar uma vez: uv run pre-commit install
+repos:
+  - repo: local
+    hooks:
+      - id: black
+        name: black
+        entry: uv run black
+        language: system
+        types: [python]
+      - id: ruff
+        name: ruff
+        entry: uv run ruff check --fix
+        language: system
+        types: [python]
