@@ -3,10 +3,11 @@ from typing import Optional
 from langchain_core.tools import tool
 from sqlalchemy.orm import Session
 
+from app.infrastructure.defenses.tool_guard import ToolGuard
 from app.infrastructure.persistence.models import Order, Product, Role
 
 
-def make_get_order_tool(actor_context: dict, db: Session):
+def make_get_order_tool(actor_context: dict, db: Session, guard: ToolGuard | None = None):
     @tool("get_order")
     def get_order(order_id: Optional[int] = None) -> str:
         """Retrieve details of a marketplace order.
@@ -17,6 +18,11 @@ def make_get_order_tool(actor_context: dict, db: Session):
         Args:
             order_id: Numeric ID of the order, or 0 / omit for latest order.
         """
+        if guard is not None:
+            rejection = guard.enforce("get_order", {"order_id": order_id}, actor_context)
+            if rejection is not None:
+                return rejection
+
         if not order_id:
             is_privileged = actor_context["role"] in (Role.admin.value, Role.support.value)
             query = db.query(Order)

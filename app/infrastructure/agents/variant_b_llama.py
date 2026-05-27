@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 from app.agents.variant_b.system_prompt import build_system_prompt
 from app.domain.entities.agent_trace import TraceStep
 from app.infrastructure.agents.tools import make_tools
+from app.infrastructure.defenses.pipeline import DefenseInputBlocked, DefensePipeline
 
 _LLM_BASE_URL = os.environ.get("LLM_BASE_URL", "https://api.together.xyz/v1")
 _MODEL = os.environ.get("LLM_AGENT_MODEL", "meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo")
@@ -37,12 +38,15 @@ class VariantBLlama:
         chroma: chromadb.ClientAPI,
         redis_client: redis_lib.Redis,
         temperature: float = 0.0,
+        defense: DefensePipeline | None = None,
     ) -> None:
         self._actor_context = actor_context
         self._redis = redis_client
         self._session_token = actor_context["session_token"]
+        self._defense = defense
 
-        tools = make_tools(actor_context, db, chroma)
+        guard = defense.tool_guard if defense is not None else None
+        tools = make_tools(actor_context, db, chroma, guard=guard)
         api_key = os.environ.get("LLM_API_KEY", "placeholder")
         llm = ChatOpenAI(
             base_url=_LLM_BASE_URL,
@@ -53,9 +57,22 @@ class VariantBLlama:
             model_kwargs={"parallel_tool_calls": False},
         )
         system_prompt = build_system_prompt(actor_context)
+        if defense is not None:
+            augmentation = defense.system_prompt_augmentation()
+            if augmentation:
+                system_prompt = f"{system_prompt}\n\n{augmentation}"
         self._graph = create_react_agent(llm, tools, prompt=system_prompt)
 
     def run(self, message: str) -> tuple[str, list[TraceStep]]:
+        defense_trace: list[TraceStep] = []
+        if self._defense is not None:
+            message = self._defense.sanitize(message)
+            allowed, reason = self._defense.check_input(message)
+            defense_trace.append(TraceStep(type="defense_verdict", content=f"input:{reason}"))
+            if not allowed:
+                raise DefenseInputBlocked(reason)
+            message = self._defense.wrap_input(message)
+
         history = self._load_history()
         history.append(HumanMessage(content=message))
 
@@ -66,17 +83,24 @@ class VariantBLlama:
                 {"recursion_limit": _MAX_ITERATIONS},
             )
         except GraphRecursionError:
-            return "max_iterations_reached", [
+            return "max_iterations_reached", defense_trace + [
                 TraceStep(type="final", content="max_iterations_reached")
             ]
         except BadRequestError as exc:
             if "tool_use_failed" in str(exc):
-                return "tool_call_error", [TraceStep(type="final", content="tool_call_error")]
+                return "tool_call_error", defense_trace + [
+                    TraceStep(type="final", content="tool_call_error")
+                ]
             raise
 
         new_messages: list[BaseMessage] = result["messages"][len(history) :]
-        trace = _extract_trace(new_messages)
+        trace = defense_trace + _extract_trace(new_messages)
         final_response = _extract_final_response(new_messages)
+        if self._defense is not None:
+            final_response, out_reasons = self._defense.apply_output_defenses(final_response)
+            for out_reason in out_reasons:
+                trace.append(TraceStep(type="defense_verdict", content=f"output:{out_reason}"))
+
         updated = history + new_messages
         self._save_history(updated)
         return final_response, trace

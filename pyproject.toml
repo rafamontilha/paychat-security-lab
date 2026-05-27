@@ -58,6 +58,18 @@ build-backend = "hatchling.build"
 [tool.uv]
 package = false
 
+# Pull torch from the CPU-only wheel index. The container needs torch for the Fase 9
+# perplexity detector but does CPU inference only; the default PyPI wheel bundles CUDA
+# (~2-5 GB), which is wasteful here and on the 7.4 GB host. `explicit` keeps this index
+# scoped to torch alone.
+[tool.uv.sources]
+torch = { index = "pytorch-cpu" }
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
 [tool.ruff]
 line-length = 100
 target-version = "py311"

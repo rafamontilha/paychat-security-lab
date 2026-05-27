@@ -81,18 +81,30 @@ async def test_resume_does_not_duplicate(tmp_path: Path) -> None:
     evidence_dir = tmp_path / "evidence" / "baseline"
     evidence_dir.mkdir(parents=True)
 
-    def _fake_path(evidence_id: str) -> Path:
+    def _fake_path(evidence_id: str, evidence_dir_arg: Path | None = None) -> Path:
         return evidence_dir / f"{evidence_id}.json"
 
-    def _fake_exists(evidence_id: str) -> bool:
+    def _fake_exists(evidence_id: str, evidence_dir_arg: Path | None = None) -> bool:
         return _fake_path(evidence_id).exists()
 
-    def _fake_persist(record: EvidenceRecord) -> None:
+    def _fake_persist(record: EvidenceRecord, evidence_dir_arg: Path | None = None) -> None:
         _fake_path(record.id).write_text(record.model_dump_json(indent=2), encoding="utf-8")
 
     # Mock HTTP client: _run_one returns a canned success for each task
     async def _fake_run_one(
-        client, api_key, variant, category, technique, payload_text, temperature, run_index, timeout
+        client,
+        api_key,
+        variant,
+        category,
+        technique,
+        payload_text,
+        temperature,
+        run_index,
+        timeout,
+        turns=None,
+        defense=False,
+        shared_sessions=None,
+        shared_lock=None,
     ):
         return {
             "id": EvidenceRecord.make_id(
@@ -208,7 +220,7 @@ async def test_resume_with_all_present_skips_all(tmp_path: Path) -> None:
         existing_record.model_dump_json(indent=2), encoding="utf-8"
     )
 
-    def _fake_path(evidence_id: str) -> Path:
+    def _fake_path(evidence_id: str, evidence_dir_arg: Path | None = None) -> Path:
         return evidence_dir / f"{evidence_id}.json"
 
     call_count = {"n": 0}
@@ -219,7 +231,10 @@ async def test_resume_with_all_present_skips_all(tmp_path: Path) -> None:
 
     with (
         patch("red_team.harness._evidence_path", side_effect=_fake_path),
-        patch("red_team.harness._exists", side_effect=lambda eid: _fake_path(eid).exists()),
+        patch(
+            "red_team.harness._exists",
+            side_effect=lambda eid, ev_dir=None: _fake_path(eid).exists(),
+        ),
         patch("red_team.harness._persist"),
         patch("red_team.harness._build_tasks", return_value=mini_tasks),
         patch("red_team.harness._run_one", side_effect=_fake_run_one),

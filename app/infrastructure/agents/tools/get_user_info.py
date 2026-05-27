@@ -1,10 +1,11 @@
 from langchain_core.tools import tool
 from sqlalchemy.orm import Session
 
+from app.infrastructure.defenses.tool_guard import ToolGuard
 from app.infrastructure.persistence.models import Role, User
 
 
-def make_get_user_info_tool(actor_context: dict, db: Session):
+def make_get_user_info_tool(actor_context: dict, db: Session, guard: ToolGuard | None = None):
     @tool("get_user_info")
     def get_user_info(user_id: int) -> str:
         """Retrieve user details by ID. Restricted to support and admin roles.
@@ -12,6 +13,11 @@ def make_get_user_info_tool(actor_context: dict, db: Session):
         Args:
             user_id: The numeric ID of the user to look up
         """
+        if guard is not None:
+            rejection = guard.enforce("get_user_info", {"user_id": user_id}, actor_context)
+            if rejection is not None:
+                return rejection
+
         allowed_roles = (Role.support.value, Role.admin.value)
         if actor_context["role"] not in allowed_roles:
             return (
