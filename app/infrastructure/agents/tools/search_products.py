@@ -1,11 +1,16 @@
 import chromadb
 from langchain_core.tools import tool
 
+from app.infrastructure.defenses.tool_guard import ToolGuard
 from app.infrastructure.rag.collections import get_or_create_products_collection
 from app.infrastructure.rag.embedder import embed
 
 
-def make_search_products_tool(chroma: chromadb.ClientAPI):
+def make_search_products_tool(
+    chroma: chromadb.ClientAPI,
+    actor_context: dict | None = None,
+    guard: ToolGuard | None = None,
+):
     @tool("search_products")
     def search_products(query: str) -> str:
         """Search the marketplace product catalog using semantic search.
@@ -13,6 +18,11 @@ def make_search_products_tool(chroma: chromadb.ClientAPI):
         Args:
             query: Natural language search query describing the product
         """
+        if guard is not None:
+            rejection = guard.enforce("search_products", {"query": query}, actor_context or {})
+            if rejection is not None:
+                return rejection
+
         collection = get_or_create_products_collection(chroma)
         query_vec = embed([query])[0]
         results = collection.query(

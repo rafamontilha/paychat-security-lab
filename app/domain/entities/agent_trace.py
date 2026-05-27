@@ -10,7 +10,13 @@ def _now_iso() -> str:
 
 class TraceStep(BaseModel):
     type: Literal[
-        "thought", "tool_call", "tool_return", "final", "guard_verdict", "presidio_findings"
+        "thought",
+        "tool_call",
+        "tool_return",
+        "final",
+        "guard_verdict",
+        "presidio_findings",
+        "defense_verdict",
     ]
     content: str
     tool_name: str | None = None

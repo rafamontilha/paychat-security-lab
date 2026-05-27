@@ -21,3 +21,12 @@ ENTITY_POLICY: dict[str, Literal["redact", "block"]] = {
 RECOGNIZER_THRESHOLD = 0.5
 
 BLOCKED_RESPONSE = "[RESPOSTA BLOQUEADA: informação sensível detectada no output do agente]"
+
+# Disclosure layer: action per data-sensitivity class assigned by the DataClassifier.
+# "public"/"internal" pass through; "pii" is redacted; "secret" blocks the whole response.
+DATA_CLASS_POLICY: dict[str, Literal["allow", "redact", "block"]] = {
+    "public": "allow",
+    "internal": "allow",
+    "pii": "redact",
+    "secret": "block",
+}

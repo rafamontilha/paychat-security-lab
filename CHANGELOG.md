@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-05-27
+- feat: Fase 9 — defesas em profundidade: 5 camadas plugáveis (sanitizer NFKC, perplexity GPT-2 anti-GCG, rebuff heurístico + canary, tool_guard com allow-list por perfil e confirmação de refund > R$500, data_classifier) via `DefensePipeline` opt-in (`?defense=on`/`X-Defense`) para Variantes A/B; Variante C mantém pipeline próprio
+- feat: `AntiTheftGuard` no rate_limiter — rate limit 60/h por sessão + cooldown por similaridade de queries; rota agent.py retorna 400 (input block) e 429 (anti-theft); `TraceStep` ganha tipo `defense_verdict`
+- feat: harness `--defense` (escreve em `evidence/post_defense`, envia `&defense=on`, trata 429 como bloqueio) e `--probing-shared-session` (sessão compartilhada por variante para o anti-theft engajar em model_theft)
+- feat: notebook `03_post_defense` — comparação baseline × pós-defesa, redução % por célula com IC Wilson 95%, coluna `block_rate_post` e heatmaps
+- fix: heurística pi_direct (lógica recusa-primeiro) — citações do canary/termos do ataque em recusas não contam mais como sucesso; `rescore_pi` re-aplica offline ao baseline (ASR pi_direct A 0.47→0.00, B 0.21→0.14)
+- docs: achado metodológico model_theft — anti-theft funciona (bloqueia requisições 61→120 por sessão no limite 60/h), mas ASR e block_rate são indicadores inválidos (controle de volume, não de detecção; ataque vence dentro do threshold) → `reduction_pct` marcado NÃO-APLICÁVEL
+- test: suíte unitária das defesas (input, output, plugin, antitheft, disclosure) + heurísticas pi
+- chore: Dockerfile rebuild com torch CPU (2.12.0+cpu) + pré-download do GPT-2; pyproject pina torch ao índice CPU; threshold de perplexidade calibrado (1500→8000) para PT benigno
+
 ## 2026-05-26
 - fix(ci): destrava pipeline — black em 16 arquivos das Fases 6-8 corrige o gate `black --check` que falhava no job quality (primeiro CI verde do histórico)
 - chore: hook de pre-commit (black + ruff via `uv run`) espelhando o job quality, evita reincidência de código não formatado

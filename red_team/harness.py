@@ -11,6 +11,9 @@ Options:
     --temperature 0.0|0.7|all  (default: all)
     --dry-run     Run only 30 evidences then stop and write _dry_run_report.md
     --resume      Skip evidences whose JSON file already exists (idempotent)
+    --defense     Enable the opt-in defense pipeline (A/B); writes to evidence/post_defense/
+    --probing-shared-session  Reuse one session per variant for probing categories
+                  (model_theft) so the anti-theft layer engages. Use with --defense.
     --base-url    API base URL  (default: http://localhost:8000)
     --timeout     HTTP timeout in seconds  (default: 120)
 
@@ -18,8 +21,9 @@ Environment variables:
     HARNESS_BUYER_API_KEY   API key for a buyer-role user (required)
 
 The harness consumes POST /api/agent/chat via HTTP only (ADR-001).
-Rate limits: Anthropic pool (variant a) and Groq pool (variants b, c) are independent.
+Rate limits: Anthropic pool (variant a) and Together AI pool (variants b, c) are independent.
 Multi-turn payloads (logic_chain_injection) are sent sequentially in the same session.
+Fase 9: --defense routes through the post-defense pipeline and persists to post_defense/.
 """
 
 from __future__ import annotations
@@ -59,6 +63,7 @@ from red_team.techniques.model_theft import MODEL_THEFT_PAYLOADS
 from red_team.techniques.sensitive_disclosure import SENSITIVE_DISCLOSURE_PAYLOADS
 
 _EVIDENCE_DIR = Path("evidence/baseline")
+_POST_DEFENSE_DIR = Path("evidence/post_defense")
 _DRY_RUN_REPORT = _EVIDENCE_DIR / "_dry_run_report.md"
 
 _ALL_CATEGORIES = [
@@ -85,6 +90,12 @@ _RUNS_PER_TEMP: dict[str, int] = {
 _TEMPERATURES = [0.0, 0.7]
 _VARIANTS = ["a", "b", "c"]
 
+# Categories whose attack model is high-volume probing within a single session (extraction
+# queries). With --probing-shared-session these reuse one session token per variant so the
+# anti-theft layer (per-session rate limit + query-budget cooldown) actually engages — fresh
+# logins per attack would each get their own budget and never trip the limit.
+_PROBING_CATEGORIES = frozenset({"model_theft"})
+
 # Low concurrency by default — collection host has 7.4GB RAM; the WSL2/Docker VM
 # (~3.7GB) crashes under parallel agent pipelines. Override via env if on a bigger box.
 _HARNESS_CONC = int(os.environ.get("HARNESS_CONCURRENCY", "2"))
@@ -105,6 +116,25 @@ async def _login(client: httpx.AsyncClient, api_key: str) -> str:
     return resp.json()["session_token"]
 
 
+async def _acquire_shared_session(
+    client: httpx.AsyncClient,
+    api_key: str,
+    variant: str,
+    shared: dict[str, str],
+    lock: asyncio.Lock,
+    force: bool = False,
+) -> str:
+    """Get (or create) the per-variant shared session token used for probing categories.
+
+    force=True replaces an expired token (used to recover from a 401 mid-run)."""
+    async with lock:
+        token = shared.get(variant)
+        if token is None or force:
+            token = await _login(client, api_key)
+            shared[variant] = token
+        return token
+
+
 # ---------------------------------------------------------------------------
 # Single attack execution (supports multi-turn)
 # ---------------------------------------------------------------------------
@@ -121,17 +151,30 @@ async def _run_one(
     run_index: int,
     timeout: float,
     turns: list[str] | None = None,
+    defense: bool = False,
+    shared_sessions: dict[str, str] | None = None,
+    shared_lock: asyncio.Lock | None = None,
 ) -> dict[str, Any]:
     evidence_id = EvidenceRecord.make_id(
         variant, category, technique, payload_text, temperature, run_index
     )
     limiter = _LIMITER_ANTHROPIC if variant == "a" else _LIMITER_GROQ
     all_messages = turns if turns else [payload_text]
+    chat_url = f"/api/agent/chat?variant={variant}" + ("&defense=on" if defense else "")
+    use_shared = (
+        shared_sessions is not None and shared_lock is not None and category in _PROBING_CATEGORIES
+    )
 
     async with _SEMAPHORE:
         async with limiter:
             try:
-                session_token = await _login(client, api_key)
+                if use_shared:
+                    assert shared_sessions is not None and shared_lock is not None
+                    session_token = await _acquire_shared_session(
+                        client, api_key, variant, shared_sessions, shared_lock
+                    )
+                else:
+                    session_token = await _login(client, api_key)
             except Exception as exc:
                 return _error_result(
                     evidence_id,
@@ -157,14 +200,27 @@ async def _run_one(
                 }
                 try:
                     resp = await client.post(
-                        f"/api/agent/chat?variant={variant}",
+                        chat_url,
                         json=body,
                         timeout=timeout,
                     )
+                    if resp.status_code == 401 and use_shared:
+                        # Shared session expired (TTL 1h) — refresh once and retry.
+                        assert shared_sessions is not None and shared_lock is not None
+                        session_token = await _acquire_shared_session(
+                            client, api_key, variant, shared_sessions, shared_lock, force=True
+                        )
+                        body["session_token"] = session_token
+                        resp = await client.post(chat_url, json=body, timeout=timeout)
                     if resp.status_code == 400:
                         detail = resp.json().get("detail", {})
                         turn_response = f"blocked_by_guard:{detail.get('category', 'unknown')}"
                         turn_trace: list[dict] = detail.get("trace", [])
+                        turn_status = "success"
+                    elif resp.status_code == 429:
+                        detail = resp.json().get("detail", {})
+                        turn_response = f"blocked_by_defense:{detail.get('reason', 'rate_limited')}"
+                        turn_trace = []
                         turn_status = "success"
                     elif resp.status_code == 503:
                         last_status = "error"
@@ -316,16 +372,18 @@ def _apply_heuristic(
 # ---------------------------------------------------------------------------
 
 
-def _evidence_path(evidence_id: str) -> Path:
-    return _EVIDENCE_DIR / f"{evidence_id}.json"
+def _evidence_path(evidence_id: str, evidence_dir: Path) -> Path:
+    return evidence_dir / f"{evidence_id}.json"
 
 
-def _persist(record: EvidenceRecord) -> None:
-    _evidence_path(record.id).write_text(record.model_dump_json(indent=2), encoding="utf-8")
+def _persist(record: EvidenceRecord, evidence_dir: Path) -> None:
+    _evidence_path(record.id, evidence_dir).write_text(
+        record.model_dump_json(indent=2), encoding="utf-8"
+    )
 
 
-def _exists(evidence_id: str) -> bool:
-    return _evidence_path(evidence_id).exists()
+def _exists(evidence_id: str, evidence_dir: Path) -> bool:
+    return _evidence_path(evidence_id, evidence_dir).exists()
 
 
 # ---------------------------------------------------------------------------
@@ -430,8 +488,21 @@ async def run(
     timeout: float,
     resume: bool,
     dry_run: bool,
+    defense: bool = False,
+    probing_shared_session: bool = False,
 ) -> list[EvidenceRecord]:
-    _EVIDENCE_DIR.mkdir(parents=True, exist_ok=True)
+    evidence_dir = _POST_DEFENSE_DIR if defense else _EVIDENCE_DIR
+    evidence_dir.mkdir(parents=True, exist_ok=True)
+    if defense:
+        print(f"[harness] Defense ENABLED — writing to {evidence_dir}")
+
+    shared_sessions: dict[str, str] | None = {} if probing_shared_session else None
+    shared_lock = asyncio.Lock() if probing_shared_session else None
+    if probing_shared_session:
+        print(
+            f"[harness] Probing shared-session ENABLED for {sorted(_PROBING_CATEGORIES)} "
+            "(one session per variant so anti-theft engages)"
+        )
 
     tasks = _build_tasks(variants, categories, temperatures)
     if dry_run:
@@ -452,7 +523,8 @@ async def run(
                     t["payload_text"],
                     t["temperature"],
                     t["run_index"],
-                )
+                ),
+                evidence_dir,
             )
         ]
         skipped = len(tasks) - len(pending)
@@ -476,6 +548,9 @@ async def run(
                 t["run_index"],
                 timeout,
                 turns=t.get("turns"),
+                defense=defense,
+                shared_sessions=shared_sessions,
+                shared_lock=shared_lock,
             )
             for t in tasks
         ]
@@ -530,7 +605,7 @@ async def run(
             trace=raw["trace"],
             metadata=merged_meta,
         )
-        _persist(record)
+        _persist(record, evidence_dir)
         records.append(record)
 
     elapsed = time.monotonic() - t0
@@ -609,6 +684,17 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--temperature", default="all", choices=["0.0", "0.7", "all"])
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--resume", action="store_true")
+    parser.add_argument(
+        "--defense",
+        action="store_true",
+        help="Enable the opt-in defense pipeline (A/B) and write to evidence/post_defense/",
+    )
+    parser.add_argument(
+        "--probing-shared-session",
+        action="store_true",
+        help="Reuse one session per variant for probing categories (model_theft) so the "
+        "anti-theft rate limit / query budget engages. Use together with --defense.",
+    )
     parser.add_argument("--base-url", default="http://localhost:8000")
     parser.add_argument("--timeout", type=float, default=120.0)
     return parser.parse_args()
@@ -636,6 +722,8 @@ def main() -> None:
             timeout=args.timeout,
             resume=args.resume,
             dry_run=args.dry_run,
+            defense=args.defense,
+            probing_shared_session=args.probing_shared_session,
         )
     )
 

@@ -8,7 +8,9 @@ from sqlalchemy.orm import Session
 
 from app.domain.entities.agent_trace import TraceStep
 from app.infrastructure.defenses.llama_guard import GuardBlockedError, GuardUnavailableError
+from app.infrastructure.defenses.pipeline import DefenseInputBlocked, DefensePipeline
 from app.infrastructure.defenses.presidio import PresidioUnavailableError
+from app.infrastructure.defenses.rate_limiter import AntiTheftGuard
 from app.infrastructure.persistence.database import get_db
 from app.infrastructure.persistence.models import User
 from app.infrastructure.rag.client import get_chroma_client
@@ -58,11 +60,17 @@ def _resolve_actor(
     }
 
 
+def _parse_toggle(value: str | None) -> bool:
+    return value is not None and value.lower() in {"on", "true", "1", "yes"}
+
+
 @router.post("/chat", response_model=AgentChatResponse)
 def agent_chat(
     body: AgentChatRequest,
     variant: str = Query(default="a"),
+    defense: str = Query(default="off"),
     x_variant: str | None = Header(default=None),
+    x_defense: str | None = Header(default=None),
     db: Session = Depends(get_db),
     chroma: chromadb.ClientAPI = Depends(get_chroma_client),
 ) -> AgentChatResponse:
@@ -74,8 +82,16 @@ def agent_chat(
             detail=f"Unknown variant '{effective_variant}'. Valid: {sorted(_VALID_VARIANTS)}",
         )
 
+    defense_enabled = _parse_toggle(x_defense) if x_defense is not None else _parse_toggle(defense)
+
     redis_client = get_redis()
     actor_context = _resolve_actor(body.session_token, redis_client, db)
+
+    # Variants A and B receive the opt-in defense pipeline by construction (ADR-001).
+    # Variant C keeps its own multi-model pipeline and ignores this flag.
+    defense_pipeline = (
+        DefensePipeline() if defense_enabled and effective_variant in {"a", "b"} else None
+    )
 
     if effective_variant == "a":
         from app.infrastructure.agents.variant_a_claude import VariantAClaude
@@ -86,6 +102,7 @@ def agent_chat(
             chroma=chroma,
             redis_client=redis_client,
             temperature=body.temperature,
+            defense=defense_pipeline,
         )
     elif effective_variant == "b":
         from app.infrastructure.agents.variant_b_llama import VariantBLlama
@@ -96,6 +113,7 @@ def agent_chat(
             chroma=chroma,
             redis_client=redis_client,
             temperature=body.temperature,
+            defense=defense_pipeline,
         )
     else:
         from app.infrastructure.agents.variant_c_pipeline import VariantCPipeline
@@ -108,8 +126,28 @@ def agent_chat(
             temperature=body.temperature,
         )
 
+    # Anti-theft layer (rate limit + query-budget probing) runs before the agent for A/B
+    # when defenses are enabled. Variant C is unaffected (keeps its own pipeline).
+    if defense_pipeline is not None:
+        allowed, reason = AntiTheftGuard(redis_client).check(body.session_token, body.message)
+        if not allowed:
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail={"error": "anti_theft_blocked", "reason": reason},
+            )
+
     try:
         response, trace = agent.run(body.message)  # type: ignore[attr-defined]
+    except DefenseInputBlocked as exc:
+        defense_trace = [TraceStep(type="defense_verdict", content=f"input_blocked:{exc.reason}")]
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "error": "blocked_by_defense",
+                "category": exc.reason,
+                "trace": [step.model_dump() for step in defense_trace],
+            },
+        )
     except GuardBlockedError as exc:
         guard_trace = [
             TraceStep(
