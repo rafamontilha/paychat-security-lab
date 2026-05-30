@@ -2,7 +2,7 @@
 
 Auditoria sistemática de segurança em três arquiteturas de LLM aplicadas a um marketplace conversacional de payments. Capstone da especialização **Applied AI Engineering** — nível Distinction.
 
-O projeto implementa três variantes funcionalmente equivalentes de um assistente ReAct (Claude Sonnet 4.6, Llama 3.1 8B via Groq, pipeline multi-model com Llama Guard + Presidio), executa uma matriz de ataques 3×6 contra cada variante e mede a efetividade de defesas em profundidade.
+O projeto implementa três variantes funcionalmente equivalentes de um assistente ReAct (Claude Sonnet 4.6, Llama 3.3 70B via Together AI, pipeline multi-model com Llama Guard 4 + Presidio), executa uma matriz de ataques 3×7 contra cada variante e mede a efetividade de defesas em profundidade.
 
 ## Pré-requisitos
 
@@ -14,8 +14,9 @@ O projeto implementa três variantes funcionalmente equivalentes de um assistent
 | Git | 2.40+ |
 
 Chaves de API necessárias:
-- `ANTHROPIC_API_KEY` — [console.anthropic.com](https://console.anthropic.com)
-- `GROQ_API_KEY` — [console.groq.com](https://console.groq.com)
+- `ANTHROPIC_API_KEY` (Variante A) — [console.anthropic.com](https://console.anthropic.com)
+- `LLM_API_KEY` (Variantes B/C, Together AI) — [api.together.xyz](https://api.together.xyz)
+- `GROQ_API_KEY` (opcional, provider legado) — [console.groq.com](https://console.groq.com)
 
 ## Setup local
 
@@ -26,7 +27,7 @@ cd paychat-security-lab
 
 # 2. Configurar variáveis de ambiente
 cp .env.example .env
-# Editar .env e preencher ANTHROPIC_API_KEY e GROQ_API_KEY
+# Editar .env e preencher ANTHROPIC_API_KEY (Variante A) e LLM_API_KEY (Variantes B/C, Together AI)
 
 # 3. Subir a infraestrutura
 docker compose up -d
@@ -53,7 +54,7 @@ app/
     use_cases/      # execute_attack, apply_defense, compute_metrics
   infrastructure/
     agents/         # Implementações das Variantes A, B, C
-    defenses/       # Llama Guard, Presidio, Rebuff, rate limiter
+    defenses/       # Llama Guard, Presidio (mock), detector heurístico (Rebuff-style), rate limiter
     persistence/    # filesystem_evidence, postgres_audit
     web/            # FastAPI app, routers, middleware
 red_team/
@@ -75,8 +76,8 @@ specs/              # Documentação de fases: missão, roadmap, tech-stack
 | Variante | Modelo | Arquitetura |
 |---|---|---|
 | A | Claude Sonnet 4.6 (Anthropic API) | API-based proprietário |
-| B | Llama 3.1 8B Instant (Groq) | Embedded open-source |
-| C | Llama Guard 3 + Llama 3.1 8B + Presidio | Pipeline multi-model |
+| B | Llama 3.3 70B Instruct Turbo (Together AI) | Embedded open-source |
+| C | Llama Guard 4 + Llama 3.3 70B + Presidio | Pipeline multi-model |
 
 ## Reprodutibilidade
 
