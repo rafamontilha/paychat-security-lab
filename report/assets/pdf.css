@@ -1,0 +1,97 @@
+/* Estilo de impressão do SECURITY_AUDIT.pdf (Pandoc -> HTML -> Edge headless). */
+
+@page {
+  size: A4;
+  margin: 2cm 1.8cm;
+}
+
+html {
+  font-size: 10.5pt;
+}
+
+body {
+  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  line-height: 1.5;
+  color: #1a1a1a;
+  max-width: none;
+  margin: 0;
+}
+
+h1, h2, h3, h4 {
+  font-weight: 600;
+  line-height: 1.25;
+  page-break-after: avoid;
+  color: #0b3d6b;
+}
+
+h1.title {
+  font-size: 1.9rem;
+  color: #0b3d6b;
+  border-bottom: 3px solid #1a73e8;
+  padding-bottom: 0.3rem;
+}
+
+h1 { font-size: 1.5rem; margin-top: 1.6rem; border-bottom: 1px solid #d0d7de; padding-bottom: 0.2rem; }
+h2 { font-size: 1.2rem; margin-top: 1.3rem; }
+h3 { font-size: 1.02rem; margin-top: 1rem; }
+
+p, li { orphans: 3; widows: 3; }
+
+a { color: #1a73e8; text-decoration: none; }
+
+blockquote {
+  border-left: 4px solid #f29900;
+  background: #fff8ec;
+  margin: 0.8rem 0;
+  padding: 0.4rem 0.9rem;
+  color: #5f4300;
+}
+
+code {
+  font-family: "Cascadia Code", "Consolas", monospace;
+  font-size: 0.88em;
+  background: #f0f3f7;
+  padding: 0.05rem 0.3rem;
+  border-radius: 3px;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0.8rem 0;
+  font-size: 0.86rem;
+  page-break-inside: avoid;
+}
+
+th, td {
+  border: 1px solid #c8d1da;
+  padding: 0.32rem 0.5rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+th { background: #eef3f9; font-weight: 600; }
+tr:nth-child(even) td { background: #fafbfd; }
+
+img, svg {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 0.6rem auto;
+  page-break-inside: avoid;
+}
+
+/* Sumário gerado pelo Pandoc (--toc) */
+#TOC, nav#TOC {
+  background: #f7f9fc;
+  border: 1px solid #d0d7de;
+  border-radius: 6px;
+  padding: 0.6rem 1rem;
+  margin: 1rem 0 1.5rem;
+  page-break-after: always;
+}
+#TOC ul { list-style: none; padding-left: 1rem; }
+#TOC > ul { padding-left: 0; }
+#TOC a { color: #1a1a1a; }
+
+hr { border: none; border-top: 1px solid #d0d7de; margin: 1.2rem 0; }

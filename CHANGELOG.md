@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-05-30
+- feat: Fase 11 — relatório executivo `report/SECURITY_AUDIT.md` (executive summary + top-5 findings, matriz 3×7 baseline vs pós-defesa, análise arquitetural A/B/C, findings por categoria com causa raiz/evidência/impacto/remediação, risco residual por arquitetura, remediações priorizadas por CVSS + impacto de negócio, apêndice white-box)
+- feat: `notebooks/00_audit_report.ipynb` — fonte única das visualizações; regenera todas as figuras de `evidence/{baseline,post_defense,whitebox}` em `report/figures/` e exporta `report/security_audit_{matrix,findings}.csv`
+- feat: toolchain de PDF sem LaTeX — `Makefile` (`report-figures`/`report-pdf`/`report-check`) + `scripts/build_report_pdf.py` (Pandoc → HTML standalone com recursos embutidos → Edge headless → `report/SECURITY_AUDIT.pdf`, 13 páginas, sumário navegável)
+- feat: `scripts/check_audit_coverage.py` — valida 21/21 células rastreadas no relatório + ausência de figuras com link quebrado
+- docs: caveats metodológicos honrados — model_theft NÃO-APLICÁVEL (controle de volume), rótulos ADR-002 (B/C = Llama 3.3 70B via Together AI), Llama Guard 4 dependente de categoria (block_rate C/pi_direct ≈ 92%)
+
 ## 2026-05-29
 - feat: Fase 10 — threat model formal (STRIDE + CVSS 21 células + cenários compostos)
 - docs(fase-10): adiciona spec da Fase 10 e alinha matriz para 3×7
