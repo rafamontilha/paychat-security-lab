@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-05-29
+- feat: Fase 10 — threat model formal (STRIDE + CVSS 21 células + cenários compostos)
+- docs(fase-10): adiciona spec da Fase 10 e alinha matriz para 3×7
+
 ## 2026-05-27
 - feat: Fase 9 — defesas em profundidade: 5 camadas plugáveis (sanitizer NFKC, perplexity GPT-2 anti-GCG, rebuff heurístico + canary, tool_guard com allow-list por perfil e confirmação de refund > R$500, data_classifier) via `DefensePipeline` opt-in (`?defense=on`/`X-Defense`) para Variantes A/B; Variante C mantém pipeline próprio
 - feat: `AntiTheftGuard` no rate_limiter — rate limit 60/h por sessão + cooldown por similaridade de queries; rota agent.py retorna 400 (input block) e 429 (anti-theft); `TraceStep` ganha tipo `defense_verdict`
