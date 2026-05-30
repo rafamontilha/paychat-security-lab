@@ -1,0 +1,51 @@
+Creative Commons Attribution 4.0 International (CC BY 4.0)
+
+Copyright (c) 2026 Rafael Montilha
+
+This license applies to the SECURITY AUDIT REPORT of the PayChat Security Lab
+and its derived assets — that is, the contents of the report/ directory,
+including but not limited to:
+
+  - SECURITY_AUDIT.md and SECURITY_AUDIT.pdf
+  - threat_model.md
+  - figures/ (heatmaps and charts)
+  - assets/ (diagrams)
+  - security_audit_matrix.csv and security_audit_findings.csv
+
+The SOURCE CODE of the project (outside report/) is licensed separately under
+the MIT License — see ../LICENSE.
+
+------------------------------------------------------------------------------
+
+You are free to:
+
+  Share  — copy and redistribute the material in any medium or format
+  Adapt  — remix, transform, and build upon the material for any purpose,
+           even commercially.
+
+Under the following terms:
+
+  Attribution — You must give appropriate credit, provide a link to the
+  license, and indicate if changes were made. You may do so in any reasonable
+  manner, but not in any way that suggests the licensor endorses you or your
+  use.
+
+  No additional restrictions — You may not apply legal terms or technological
+  measures that legally restrict others from doing anything the license
+  permits.
+
+------------------------------------------------------------------------------
+
+Suggested attribution:
+
+  "PayChat Security Lab — LLM Security: Vulnerabilities and Defense Patterns"
+  by Rafael Montilha, licensed under CC BY 4.0.
+  https://github.com/rafamontilha/paychat-security-lab
+
+The full legal code of this license is available at:
+  https://creativecommons.org/licenses/by/4.0/legalcode
+
+A human-readable summary (the "deed") is available at:
+  https://creativecommons.org/licenses/by/4.0/
+
+This is a human-readable notice; the canonical license text governs.

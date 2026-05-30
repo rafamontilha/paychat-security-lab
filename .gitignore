@@ -23,6 +23,8 @@ evidence/post_defense/
 evidence/whitebox/
 evidence/surrogate/
 evidence/_archive_groq_b_baseline/
+evidence/_post_defense_errors_backup/
+evidence/_post_defense_modeltheft_nosession_backup/
 chroma_data/
 *.db
 *.sqlite3
@@ -40,6 +42,13 @@ desktop.ini
 .idea/
 .vscode/
 *.swp
+
+# Claude Code (estado local da máquina)
+.claude/settings.local.json
+.claude/*.lock
+
+# Scripts operacionais de re-coleta (logs + contêm secrets locais)
+scripts/recollect_*
 
 # Docker
 *.override.yml

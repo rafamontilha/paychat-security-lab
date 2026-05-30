@@ -1,6 +1,11 @@
 # Changelog
 
 ## 2026-05-30
+- feat: Fase 12 — publicação e portfólio: README raiz enriquecido (badges CI/MIT/CC BY 4.0/PDF, missão em 3 parágrafos, diagrama Mermaid das 3 variantes, link do relatório, créditos) e placeholder `<seu-usuario>` substituído por `rafamontilha`
+- feat: licenciamento dual — `LICENSE` MIT (código) + `report/LICENSE` CC BY 4.0 (relatório e assets)
+- feat: draft do post LinkedIn `report/linkedin_post.md` (título, copy ~200 palavras com achados reais, imagem do heatmap, entrada de perfil)
+- chore: `.gitignore` exclui estado local (`.claude/settings.local.json`, `*.lock`), backups de `evidence/` e `scripts/recollect_*` (logs + script com secret local)
+- docs: spec da Fase 12 (`specs/2026-05-30-fase-12-publicacao/`)
 - feat: Fase 11 — relatório executivo `report/SECURITY_AUDIT.md` (executive summary + top-5 findings, matriz 3×7 baseline vs pós-defesa, análise arquitetural A/B/C, findings por categoria com causa raiz/evidência/impacto/remediação, risco residual por arquitetura, remediações priorizadas por CVSS + impacto de negócio, apêndice white-box)
 - feat: `notebooks/00_audit_report.ipynb` — fonte única das visualizações; regenera todas as figuras de `evidence/{baseline,post_defense,whitebox}` em `report/figures/` e exporta `report/security_audit_{matrix,findings}.csv`
 - feat: toolchain de PDF sem LaTeX — `Makefile` (`report-figures`/`report-pdf`/`report-check`) + `scripts/build_report_pdf.py` (Pandoc → HTML standalone com recursos embutidos → Edge headless → `report/SECURITY_AUDIT.pdf`, 13 páginas, sumário navegável)
