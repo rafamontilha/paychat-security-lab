@@ -138,9 +138,9 @@ Cada fase entrega uma capacidade testável. As fases são dimensionadas para 1�
 - **Insecure plugin design:** TOCTOU em `process_refund` (validar status entre check e execute), parâmetros não validados em `send_message` (recipient_id arbitrário), confused deputy via tool chaining
 - **Excessive agency:** comprador comum acionando ferramentas administrativas via injeção (10 cenários), cross-actor impersonation (5 cenários), logic-chain injection para escalada
 - **Apêndice white-box (GPT-2 small):** scripts em `red_team/whitebox/` que rodam GCG (sufixo adversarial) e MIA simplificado contra GPT-2 carregado via Transformers; resultados separados em `evidence/whitebox/`
-- Notebook `notebooks/02_baseline_complete.ipynb` consolida toda a matriz 3×6 baseline + apêndice white-box
+- Notebook `notebooks/02_baseline_complete.ipynb` consolida toda a matriz 3×7 baseline + apêndice white-box
 
-**Done when:** matriz 3×6 baseline completa com pelo menos 30 evidências por célula; apêndice white-box mostra GCG funcionando em GPT-2 (sufixo encontrado, exemplo de bypass); notebook exporta tabela em CSV para uso no relatório.talvez
+**Done when:** matriz 3×7 baseline completa com pelo menos 30 evidências por célula; apêndice white-box mostra GCG funcionando em GPT-2 (sufixo encontrado, exemplo de bypass); notebook exporta tabela em CSV para uso no relatório.talvez
 
 ---
 
@@ -173,7 +173,7 @@ Cada fase entrega uma capacidade testável. As fases são dimensionadas para 1�
 - Data classification layer: antes de retornar resposta, classifica conteúdo em `public`, `internal`, `pii`, `secret`; tipos sensíveis são redacted ou bloqueados conforme política
 
 ### Re-execução
-- Toda a matriz 3×6 é re-executada com defesas ativadas; resultados persistidos em `evidence/post_defense/`
+- Toda a matriz 3×7 é re-executada com defesas ativadas; resultados persistidos em `evidence/post_defense/`
 - Notebook `notebooks/03_post_defense.ipynb` calcula redução de attack success rate por célula e gera comparativo baseline vs pós-defesa
 
 **Done when:** todas as 5 camadas de defesa implementadas e cobertas por testes unitários; matriz pós-defesa completa; notebook gera tabela de redução percentual por (variante, categoria).
@@ -193,7 +193,7 @@ Cada fase entrega uma capacidade testável. As fases são dimensionadas para 1�
 - Trade-off analysis: tabela comparando A, B, C em latência média, custo operacional estimado por 1M requests, complexidade de operação
 - Mapeamento explícito de cada vulnerabilidade encontrada para impacto de negócio em payments: account takeover, vendor impersonation, chargeback fraud, regulatory non-compliance
 
-**Done when:** `report/threat_model.md` está completo com diagramas, matriz CVSS preenchida, tabela de trade-offs e mapeamento de impacto. Documento revisado para garantir que cada finding na matriz 3×6 tem entrada correspondente no threat model.
+**Done when:** `report/threat_model.md` está completo com diagramas, matriz CVSS preenchida, tabela de trade-offs e mapeamento de impacto. Documento revisado para garantir que cada finding na matriz 3×7 tem entrada correspondente no threat model.
 
 ---
 
@@ -205,7 +205,7 @@ Cada fase entrega uma capacidade testável. As fases são dimensionadas para 1�
   - Executive summary (1 página) com top 5 findings, redução agregada de risco, recomendações priorizadas
   - Contexto e escopo
   - Threat model resumido (linka para `threat_model.md`)
-  - Matriz 3×6 baseline vs pós-defesa (heatmap visual)
+  - Matriz 3×7 baseline vs pós-defesa (heatmap visual)
   - Análise arquitetural comparativa (A vs B vs C)
   - Findings detalhados por categoria com causa raiz, evidência, impacto, remediação
   - Risco residual quantificado por arquitetura
@@ -230,7 +230,7 @@ Cada fase entrega uma capacidade testável. As fases são dimensionadas para 1�
 - Post no LinkedIn como projeto de portfólio:
   - Título: "LLM Security: Vulnerabilities and Defense Patterns — Applied AI Engineering Specialization"
   - Descrição de 200 palavras com escopo, achados principais, stack e link
-  - Imagem com heatmap da matriz 3×6 (do notebook)
+  - Imagem com heatmap da matriz 3×7 (do notebook)
 - Entrada no perfil LinkedIn em "Projetos"
 
 **Done when:** link público do repositório acessível, README renderiza corretamente no GitHub, relatório PDF baixável; post no LinkedIn publicado com link funcional.
