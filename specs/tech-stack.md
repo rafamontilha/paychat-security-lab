@@ -12,10 +12,10 @@ O stack do projeto é organizado em oito camadas, cada uma com responsabilidade 
 |---|---|---|
 | Marketplace base | Sistema mínimo que sustenta os ataques | Python, FastAPI, PostgreSQL |
 | Agente | Orquestração ReAct e tool calling | LangGraph |
-| Modelos LLM | Inteligência das três variantes | Claude Sonnet 4.6, Llama 3.1 8B (Groq), Llama Guard 3 (Groq) |
+| Modelos LLM | Inteligência das três variantes | Claude Sonnet 4.6, Llama 3.3 70B Turbo (Together AI), Llama Guard 4 (Together AI) |
 | Infraestrutura | Persistência, cache e RAG | Docker Compose, Redis, ChromaDB |
 | Red team | Execução sistemática de ataques | Garak, PyRIT, harness customizado, Transformers (white-box) |
-| Defesas | Camadas de proteção em profundidade | Llama Guard 3, Rebuff, Presidio |
+| Defesas | Camadas de proteção em profundidade | Llama Guard 4, detector heurístico (Rebuff-style), Presidio (mock) |
 | Avaliação | Métricas, testes e visualizações | Pytest, Jupyter, Pandas |
 | Entrega | CI/CD, scoring e documentação | GitHub Actions, CVSS, Markdown |
 
@@ -104,26 +104,28 @@ Modelo proprietário da Anthropic, acessado via API. Representa o estado da arte
 
 **Custo estimado para o projeto:** US$ 30–60 em chamadas durante toda a execução da matriz 3×6 (baseline + pós-defesa).
 
-### Llama 3.1 8B Instant (Variantes B e C)
+### Llama 3.3 70B Instruct Turbo (Variantes B e C)
 
-Modelo open-source da Meta, acessado via Groq API. Mesmo modelo nas duas variantes para isolar o efeito da arquitetura defensiva, não do modelo subjacente.
+Modelo open-source da Meta, acessado via Together AI (API OpenAI-compatible). Mesmo modelo nas duas variantes para isolar o efeito da arquitetura defensiva, não do modelo subjacente.
+
+> **Migração documentada (ver ADR-002):** o projeto começou com Llama 3.1 8B Instant via Groq. Em runtime, B e C rodam **Llama 3.3 70B Turbo via Together AI**. A decisão foi tomada de forma consciente — não é label histórico. As variáveis `LLM_*` do `.env` são a fonte de verdade; o baseline e o pós-defesa de B/C foram coletados sob esta configuração e são consistentes entre si.
 
 **Justificativa:**
-- Hospedagem na Groq dispensa hardware local (a máquina de desenvolvimento tem 8 GB de RAM)
-- Inferência em LPU customizada entrega 840 tokens/segundo, viabilizando suítes longas de red team
-- Free tier de 14.400 requests/dia no Llama 8B cobre toda a execução do projeto sem custo
-- API OpenAI-compatible facilita integração com LangGraph e permite trocar entre variantes mudando apenas a base URL
+- Hospedagem gerenciada dispensa hardware local (a máquina de desenvolvimento tem 8 GB de RAM)
+- API OpenAI-compatible facilita integração com LangGraph e permite trocar entre variantes/providers mudando apenas a base URL
+- Together AI tem rate limit dinâmico (sem tiers; só exige compra única de US$ 5), o que viabiliza suítes longas de red team — a throttle real do projeto passou a ser a RAM local, não a API
+- O 70B é um alvo "mais próximo de produção" que o 8B, fortalecendo a comparação A (Claude) vs B/C (open-source gerenciado)
 - Alinhamento Meta's safety training, mais permissivo que Claude, expõe vulnerabilidades mais facilmente
 
-### Llama Guard 3 (Variante C)
+### Llama Guard 4 12B (Variante C)
 
-Modelo classificador da Meta especializado em moderação de conteúdo. Usado como pré-filtro de input e output na Variante C, hospedado na Groq API.
+Modelo classificador da Meta especializado em moderação de conteúdo. Usado como pré-filtro de input na Variante C, hospedado na Together AI.
 
 **Justificativa:**
 - Treinado especificamente para detectar conteúdo malicioso, prompt injection e jailbreak
-- Disponível no catálogo Groq, mesma latência baixa e mesma autenticação que o modelo principal
+- Disponível no catálogo Together AI, mesma autenticação e base URL que o modelo principal
 - Padrão de fato em pipelines de defesa LLM em produção
-- 1B de parâmetros, latência baixa o suficiente para uso em pipeline
+- Saída no formato `safe` / `unsafe\nS<categoria>` consumida por `llama_guard.py` (`raw.lower().startswith("unsafe")`)
 
 ### GPT-2 small (apêndice white-box)
 
@@ -137,22 +139,22 @@ Modelo histórico da OpenAI, 124M parâmetros, pesos públicos via Hugging Face.
 
 **Identifier:** `gpt2` no Hugging Face Hub.
 
-### Por que Groq como "embedded representativo"
+### Por que inferência gerenciada como "embedded representativo"
 
-A constituição classifica a Variante B como "embedded open-source model". A escolha de Groq sobre self-hosting via Ollama merece nota explícita porque pode parecer contraditória.
+A constituição classifica a Variante B como "embedded open-source model". A escolha de inferência gerenciada (Together AI) sobre self-hosting via Ollama merece nota explícita porque pode parecer contraditória.
 
-**Argumento arquitetural:** o threat model funcional de um modelo open-source hospedado em Groq é equivalente ao de um modelo open-source self-hosted em GPUs próprias, exceto por dois pontos endereçados na análise comparativa:
+**Argumento arquitetural:** o threat model funcional de um modelo open-source hospedado em Together AI é equivalente ao de um modelo open-source self-hosted em GPUs próprias, exceto por dois pontos endereçados na análise comparativa:
 
-1. **Acesso a logits e gradientes:** Groq não expõe (limitação que define a fronteira black-box vs white-box, explorada explicitamente no apêndice do relatório)
-2. **Soberania de dados:** Groq processa dados em infraestrutura de terceiros (consideração discutida na análise multi-model como recomendação de governança)
+1. **Acesso a logits e gradientes:** Together AI não expõe (limitação que define a fronteira black-box vs white-box, explorada explicitamente no apêndice do relatório)
+2. **Soberania de dados:** Together AI processa dados em infraestrutura de terceiros (consideração discutida na análise multi-model como recomendação de governança)
 
 Para todos os outros vetores — prompt injection, insecure output handling, sensitive information disclosure, insecure plugin design, excessive agency — o comportamento do modelo é determinado pelos pesos, que são os mesmos.
 
-Empresas de payments majoritariamente preferem inferência open-source gerenciada (Groq, Together, Bedrock) a self-hosting de GPUs por questão de custo operacional e SLA. A Variante B representa esse cenário dominante.
+Empresas de payments majoritariamente preferem inferência open-source gerenciada (Together, Groq, Bedrock) a self-hosting de GPUs por questão de custo operacional e SLA. A Variante B representa esse cenário dominante.
 
-### Cliente Groq
+### Cliente OpenAI-compatible
 
-SDK Python oficial (`groq`) ou cliente OpenAI-compatible (`openai`) com base URL ajustada para `https://api.groq.com/openai/v1`. Escolha do cliente OpenAI permite uma única abstração para Claude e Llama na harness de red team.
+Cliente `openai` com base URL ajustada para `https://api.together.xyz/v1` (variável `LLM_BASE_URL`). O cliente OpenAI permite uma única abstração para Claude e Llama na harness de red team, e trocar de provider (Together ↔ Groq) exige apenas mudar a base URL e o nome do modelo nas variáveis `LLM_*`.
 
 ---
 
@@ -167,9 +169,10 @@ Orquestração local de todos os serviços. Garante que o ambiente seja reproduz
 - `db`: PostgreSQL 16 com volume persistente
 - `redis`: cache de sessões e rate limiting
 - `chroma`: ChromaDB para RAG
-- `presidio`: container do Presidio Analyzer para filtro de PII na Variante C
 
-Toda a inferência LLM é remota (Claude via Anthropic API, Llama e Llama Guard via Groq API). A máquina local executa apenas a aplicação, a infraestrutura de suporte e os scripts de red team — uso de RAM totaliza ~5.5 GB, dentro do limite de 8 GB.
+O filtro de PII da Variante C usa um **mock regex do Presidio** (`scripts/presidio_mock.py`) rodando no host em `:3000`, não o container Presidio Analyzer (ver justificativa em §6). O serviço `presidio` do compose não é usado.
+
+Toda a inferência LLM é remota (Claude via Anthropic API, Llama 3.3 70B e Llama Guard 4 via Together AI). A máquina local executa a aplicação, a infraestrutura de suporte, o GPT-2 local do detector de perplexidade e os scripts de red team — uso de RAM da stack Docker ~627 MiB, dentro do limite de ~7.4 GB do host.
 
 ### Redis 7
 
@@ -245,30 +248,29 @@ Os scripts ficam isolados em `red_team/whitebox/` e rodam fora do pipeline princ
 
 ## 6. Camada de defesas
 
-### Llama Guard 3
+### Llama Guard 4
 
-Já listado na camada de modelos. Atua como camada de defesa na Variante C como:
+Já listado na camada de modelos. Atua como pré-filtro de input na Variante C: detecta prompt injection e conteúdo malicioso antes de chegar ao modelo principal, rejeitando o request com 400 + categoria. O comportamento é fortemente dependente da categoria do ataque — bloqueia onde o vetor toca a taxonomia de conteúdo (privacidade S7, ação nociva), e passa onde é manipulação arquitetural pura (model theft, insecure plugin).
 
-- Pré-filtro de input (detecta prompt injection antes de chegar ao modelo principal)
-- Pós-filtro de output (detecta respostas problemáticas antes de retornar ao usuário)
+### Detector heurístico (Rebuff-style)
 
-### Rebuff
+Detector de prompt injection inspirado no Rebuff, implementado de forma **customizada** em `app/infrastructure/defenses/rebuff.py` (`RebuffDetector`). Escopo entregue:
 
-Framework dedicado a detecção de prompt injection. Usado como camada complementar:
+- Heurísticas regex baseadas em padrões conhecidos de injeção
+- Canary tokens injetados no prompt para detectar leakage no output
 
-- Heurísticas baseadas em padrões conhecidos de injeção
-- Detector baseado em LLM (segundo modelo opinando sobre se a entrada é maliciosa)
-- Canary tokens injetados no prompt para detectar leakage
-- Integração com vector DB para aprender com ataques passados
+> **Divergência consciente:** não usamos a biblioteca Rebuff (que traz detector baseado em LLM e integração com vector DB). Para o escopo do lab, um detector heurístico determinístico é mais auditável e reproduzível que um segundo LLM opinando — e evita custo/latência de chamada extra. Detector LLM e vector DB ficam fora de escopo.
 
-### Microsoft Presidio
+### Presidio (mock)
 
-Framework de detecção e anonimização de PII. Usado na camada de output da Variante C:
+Detecção e redação de PII na camada de output da Variante C, exposta em `:3000` via `scripts/presidio_mock.py`:
 
-- Detecção de CPF, RG, email, telefone, número de cartão (Luhn)
-- Redação automática antes de retornar resposta ao usuário
-- Suporte a entidades customizadas (tokens de pagamento internos do marketplace)
-- Política de redação configurável por nível de sensibilidade
+- Detecção de CPF, CNPJ, email, telefone, número de cartão (Luhn)
+- Redação automática (`<REDACTED:TYPE>`) antes de retornar resposta ao usuário
+- Entidades customizadas (`PAYMENT_TOKEN`, `INTERNAL_SECRET`)
+- Política de redação configurável por nível de severidade
+
+> **Divergência consciente:** usamos um **mock regex** fiel ao contrato `/analyze`, não o container Microsoft Presidio real. O Presidio real não traz reconhecedores nativos de CPF/CNPJ nem suporte a `pt`, então entregaria essencialmente os mesmos regexes custando ~2 GiB de RAM — inviável no budget de ~7.4 GB do host com o GPT-2 local e a stack Docker no ar.
 
 ### Rate limiter customizado
 
@@ -279,13 +281,11 @@ Implementação Python sobre Redis. Estratégias aplicadas:
 - Detecção de padrões de extraction queries (queries muito similares em sequência curta)
 - Cooldown progressivo em caso de comportamento suspeito
 
-### Output perturbation
+### Output perturbation (deferida — fora de escopo)
 
-Aplicado apenas na Variante B contra model theft via extraction. Implementação:
+Defesa contra model theft via extraction, **não implementada** na entrega inicial. Exigiria adição de ruído controlado em logits antes da amostragem — e nem Together AI nem Groq expõem logits. Adiada para post-MVP (depende de modelo self-hosted). Contra model theft, a defesa entregue é o rate limiting do `AntiTheftGuard` (controle de volume); ver nota metodológica abaixo.
 
-- Adição de ruído controlado em logits antes da amostragem
-- Truncamento aleatório de tokens em respostas longas
-- Trade-off mensurado: redução de utility vs redução de extraction success rate
+> **Nota metodológica (model theft):** o rate limiting é controle de volume, não de conteúdo. A redução de ASR para model theft é marcada **NÃO-APLICÁVEL** no relatório, porque (a) `block_rate = (volume − threshold)/volume` é aritmética do threshold, não medida de detecção; e (b) o ataque se completa dentro do threshold. Demonstra-se a quebra do indicador em vez de inflar um número de "redução %".
 
 ---
 
@@ -337,7 +337,7 @@ Padrão de scoring usado para priorizar remediações no relatório executivo. C
 
 - Vetor CVSS completo
 - Score base
-- Score temporal ajustado pelo contexto de payments
+- Score Environmental ajustado pelo contexto de payments (CR:H/IR:H/AR:M; Temporal omitido por indisponibilidade de E/RL para LLMs comerciais — ver `report/threat_model.md` §2.2)
 - Tradução do score técnico para impacto de negócio (chargeback, account takeover, fraud loss)
 
 ### Markdown + Pandoc
@@ -451,6 +451,31 @@ Esta decisão deve ser revisitada se ao final da Fase 6 a estrutura estiver atra
 
 ---
 
+### ADR-002 — Migração Groq → Together AI e upgrade Llama 3.1 8B → 3.3 70B nas Variantes B/C
+
+**Status:** Aceito
+
+**Contexto:**
+O plano original (ADR de stack v1/v2) definia as Variantes B e C sobre Llama 3.1 8B Instant e Llama Guard 3 1B hospedados na Groq, justificado pelo free tier de 14.4K req/dia e pela latência da LPU. Durante a execução do red team, dois fatos mudaram o cálculo:
+
+1. O free tier da Groq impõe limites diários e de tokens que interrompiam suítes longas de red team, exigindo fragmentar a coleta ao longo de dias.
+2. O 8B é um alvo fraco para uma auditoria que se propõe "próxima de produção" — empresas de payments que adotam open-source gerenciado tendem a rodar modelos maiores.
+
+O roadmap (`Post-MVP`) já previa o upgrade para 70B como item adiado, com a ressalva de que "confunde a variável experimental". A ressalva se aplica à comparação A vs B, não a B vs C.
+
+**Decisão:**
+Migrar B e C para **Llama 3.3 70B Instruct Turbo** e o guard para **Llama Guard 4 12B**, ambos via **Together AI** (API OpenAI-compatible, `LLM_BASE_URL=https://api.together.xyz/v1`). As variáveis `LLM_*` do `.env` são a fonte de verdade do runtime; o código (`variant_b_llama.py`) é dirigido por env e a Variante C compõe a B, então ambas trocam de provider/modelo juntas.
+
+**Consequências:**
+- **Positivas:** alvo mais próximo de produção; rate limit dinâmico da Together (sem tiers, só compra única de US$ 5) remove a Groq como gargalo — a throttle real passa a ser a RAM local; baseline e pós-defesa de B/C foram coletados integralmente sob 70B, logo são **consistentes entre si**.
+- **Negativas:** a comparação A (Claude) vs B/C deixou de controlar o tamanho do modelo (8B → 70B); a justificativa de custo zero do free tier Groq não vale mais (custo real ~US$ 2 na coleta). B vs C permanece limpa (mesmo modelo, só a arquitetura defensiva muda).
+- **Mitigação da ressalva do roadmap:** o objetivo central do projeto é comparar **arquiteturas defensivas** (A api-based vs B embedded vs C pipeline), não tamanhos de modelo; a diferença de porte A↔B é discutida explicitamente na análise comparativa do relatório.
+- **Groq:** permanece como provider legado opcional (`GROQ_API_KEY`/`GROQ_MODEL` no `.env`), útil para smoke test alternativo, mas não é o caminho de runtime.
+
+**Aplicação:** todas as referências a "Llama 3.1 8B via Groq" e "Llama Guard 3" em specs/README/notebooks são label histórico; o que executou é o desta ADR.
+
+---
+
 ## Resumo de versões fixadas
 
 ```text
@@ -461,18 +486,18 @@ postgresql                16
 redis                     7
 chromadb                  0.5
 langgraph                 0.2
-groq                      0.13 (SDK Python)
-openai                    1.55 (cliente compatível para Claude e Groq)
-transformers              4.46+ (apêndice white-box)
-torch                     2.5+ (apêndice white-box)
+openai                    1.55 (cliente OpenAI-compatible para Claude, Together e Groq)
+groq                      0.13 (SDK Python — provider legado, opcional)
+transformers              4.46+ (apêndice white-box + perplexidade)
+torch                     2.12+cpu (índice CPU do PyTorch; apêndice white-box + perplexidade)
 claude-sonnet             4.5 (claude-sonnet-4-5)
-llama                     llama-3.1-8b-instant (via Groq)
-llama-guard               llama-guard-3-1b (via Groq)
+llama                     meta-llama/Llama-3.3-70B-Instruct-Turbo (via Together AI)
+llama-guard               meta-llama/Llama-Guard-4-12B (via Together AI)
 gpt-2                     gpt2 (via Hugging Face Hub)
 garak                     0.10
 pyrit                     0.6
-presidio-analyzer         2.2
-rebuff                    0.1
+presidio                  mock regex (scripts/presidio_mock.py) — não o container Analyzer
+rebuff                    detector heurístico customizado — não a biblioteca rebuff
 ```
 
 ---
@@ -482,10 +507,10 @@ rebuff                    0.1
 | Item | Custo aproximado |
 |---|---|
 | Anthropic API (Claude Sonnet 4.6) | US$ 30–60 ao longo do projeto |
-| Groq API (Llama 3.1 8B + Llama Guard 3) | US$ 0 — free tier cobre os 14.4K req/dia |
-| Infraestrutura local (containers + scripts) | Zero — roda em laptop com 8 GB de RAM |
+| Together AI (Llama 3.3 70B + Llama Guard 4) | ~US$ 2 reais gastos na coleta; exige compra única de US$ 5 (rate limit dinâmico, sem tiers) |
+| Infraestrutura local (containers + scripts + GPT-2) | Zero — roda em laptop com ~7.4 GB de RAM |
 | White-box em GPT-2 small (apêndice) | Zero — cabe na RTX 3050 de 4 GB |
-| **Total estimado** | **US$ 30–60 (R$ 150–300)** |
+| **Total estimado** | **US$ 35–65 (R$ 175–325)** |
 
 ---
 
@@ -494,7 +519,7 @@ rebuff                    0.1
 Esta seção registra escolhas que podem ser revistas conforme o projeto avança:
 
 - **Embedding model do RAG** — `all-MiniLM-L6-v2` pode ser substituído por modelo maior se a qualidade do RAG for insuficiente para os ataques de indirect injection
-- **Modelo open-source nas Variantes B e C** — pode ser trocado para Llama 3.3 70B via Groq se houver tier pago disponível e quisermos cenário mais próximo de produção, ao custo de US$ 15–25 totais
+- **Modelo open-source nas Variantes B e C** — ~~revisável~~ **decisão tomada (ver ADR-002)**: migrado de Llama 3.1 8B (Groq) para Llama 3.3 70B Turbo via Together AI. Baseline e pós-defesa de B/C foram coletados sob esta configuração
 - **Modelo do apêndice white-box** — GPT-2 small (124M) pode ser substituído por Pythia 410M ou TinyLlama 1.1B para cobertura técnica mais robusta, ainda dentro da capacidade da RTX 3050 de 4 GB
 - **Sessão pontual em GPU cloud** — opcional, US$ 5–10 em RunPod ou Vast.ai para rodar GCG/MIA contra Llama 3.1 8B real, caso queiramos resultados white-box mais convincentes do que GPT-2 small
 - **Pandoc para PDF** — pode ser substituído por Quarto se a saída exigir formatação mais elaborada
@@ -502,4 +527,4 @@ Esta seção registra escolhas que podem ser revistas conforme o projeto avança
 
 ---
 
-*Documento vivo · v3 · revisado conforme o projeto evolui*
+*Documento vivo · v4 · alinhado ao runtime real (Together AI / Llama 3.3 70B / Guard 4, Presidio mock, Rebuff heurístico) — ver ADR-002*

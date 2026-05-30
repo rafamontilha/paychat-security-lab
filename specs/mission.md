@@ -39,7 +39,7 @@ Um laboratório de segurança que serve como portfólio técnico e como referên
 O projeto entrega três artefatos principais:
 
 1. **Três aplicações funcionalmente equivalentes** de um marketplace conversacional com agente ReAct, implementadas sob arquiteturas distintas para isolar variáveis de segurança.
-2. **Matriz de evidências 3 × 6**, executada antes e depois da implementação de defesas, totalizando 36 pontos quantitativos sobre redução de attack success rate.
+2. **Matriz de evidências 3 × 7**, executada antes e depois da implementação de defesas, totalizando 42 pontos quantitativos sobre redução de attack success rate. As seis categorias do enunciado viram sete colunas porque prompt injection direta e indireta são medidas como vetores separados.
 3. **Relatório de auditoria executivo** com threat model formal, análise comparativa entre arquiteturas e remediações priorizadas por CVSS e impacto de negócio.
 
 ---
@@ -90,7 +90,7 @@ Para manter o foco e a profundidade exigidos pelo nível Distinction da avaliaç
 
 **Evidência quantitativa** — cada ataque e cada defesa é documentado com taxa de sucesso antes e depois, permitindo comparações reproduzíveis.
 
-**Reprodutibilidade** — todo o código é público, o ambiente roda via Docker Compose, e qualquer pessoa com a infraestrutura mínima descrita no README pode reexecutar a matriz 3 × 6.
+**Reprodutibilidade** — todo o código é público, o ambiente roda via Docker Compose, e qualquer pessoa com a infraestrutura mínima descrita no README pode reexecutar a matriz 3 × 7.
 
 **Executive-ready** — o relatório final é estruturado para que liderança técnica e não-técnica encontre o que precisa nos primeiros minutos, com apêndice técnico para quem precisa reproduzir os achados.
 
@@ -101,9 +101,9 @@ Para manter o foco e a profundidade exigidos pelo nível Distinction da avaliaç
 O projeto será considerado concluído quando os seguintes itens estiverem entregues:
 
 - [ ] Três variantes do marketplace operacionais sob a mesma interface funcional
-- [ ] Matriz 3 × 6 baseline preenchida com evidências reproduzíveis por vetor
+- [ ] Matriz 3 × 7 baseline preenchida com evidências reproduzíveis por vetor (prompt injection direta e indireta como colunas separadas)
 - [ ] Defesas implementadas em cinco camadas (input, output, plugin, anti-theft, disclosure)
-- [ ] Matriz 3 × 6 pós-defesa com cálculo quantitativo de redução de attack success rate
+- [ ] Matriz 3 × 7 pós-defesa com cálculo quantitativo de redução de attack success rate, exceto model theft — onde a defesa é rate limiting (controle de volume, não de conteúdo) e a redução de ASR é marcada NÃO-APLICÁVEL com justificativa metodológica no relatório
 - [ ] Threat model formal STRIDE aplicado aos quatro atores e às três arquiteturas
 - [ ] Análise de vulnerabilidades compostas no pipeline multi-model
 - [ ] Relatório executivo com remediações priorizadas por CVSS e impacto de negócio
@@ -112,4 +112,4 @@ O projeto será considerado concluído quando os seguintes itens estiverem entre
 
 ---
 
-*Documento vivo · v3 · revisado conforme o projeto evolui*
+*Documento vivo · v4 · matriz 3×7 e caveat de model theft alinhados ao executado*
