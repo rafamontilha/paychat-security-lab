@@ -50,5 +50,8 @@ desktop.ini
 # Scripts operacionais de re-coleta (logs + contêm secrets locais)
 scripts/recollect_*
 
+# Draft pessoal do post LinkedIn (mantido local, não versionar no repo público)
+report/linkedin_post.md
+
 # Docker
 *.override.yml
