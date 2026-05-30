@@ -102,7 +102,7 @@ Modelo proprietário da Anthropic, acessado via API. Representa o estado da arte
 - Ausência de acesso a logits e pesos define a fronteira de ataques aplicáveis (apenas black-box), o que é exatamente o cenário de produção realista para clientes de payments
 - Identifier do modelo: `claude-sonnet-4-5` (versão mais recente disponível via API)
 
-**Custo estimado para o projeto:** US$ 30–60 em chamadas durante toda a execução da matriz 3×6 (baseline + pós-defesa).
+**Custo estimado para o projeto:** US$ 30–60 em chamadas durante toda a execução da matriz 3×7 (baseline + pós-defesa).
 
 ### Llama 3.3 70B Instruct Turbo (Variantes B e C)
 
@@ -134,7 +134,7 @@ Modelo histórico da OpenAI, 124M parâmetros, pesos públicos via Hugging Face.
 **Justificativa:**
 - Cabe folgadamente na RTX 3050 (4 GB VRAM), carregado via Hugging Face Transformers
 - Pesos abertos permitem cálculo de gradientes e acesso completo a logits
-- Modelo de demonstração técnica, não parte da matriz 3×6 comparativa
+- Modelo de demonstração técnica, não parte da matriz 3×7 comparativa
 - Suficiente para validar a mecânica dos ataques white-box e justificar discussão arquitetural sobre exposição de superfície em deployments self-hosted
 
 **Identifier:** `gpt2` no Hugging Face Hub.
@@ -304,7 +304,7 @@ Framework de testes. Usado para:
 
 Notebook consolidado entregue ao final do projeto. Contém:
 
-- Execução interativa da matriz 3×6 (baseline e pós-defesa)
+- Execução interativa da matriz 3×7 (baseline e pós-defesa)
 - Visualizações comparativas dos resultados
 - Análise de causa raiz por vetor com exemplos de payload
 - Geração das tabelas e gráficos usados no relatório executivo
@@ -315,7 +315,7 @@ Stack padrão para manipulação e visualização. Usado para:
 
 - Carregar resultados estruturados das execuções de red team
 - Calcular attack success rate, redução percentual, intervalos de confiança
-- Gerar heatmaps da matriz 3×6
+- Gerar heatmaps da matriz 3×7
 - Produzir gráficos de barras comparativos por categoria
 
 ---
