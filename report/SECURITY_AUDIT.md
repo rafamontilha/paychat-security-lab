@@ -28,16 +28,16 @@ As três arquiteturas:
 | # | Finding | ASR baseline → pós | CVSS Env | Impacto de negócio |
 |---|---|---|---|---|
 | 1 | **`a_ioh`** — Claude emite output não-sanitizado sob demanda | 67% → 69% (n=100) | 7.7 (High) | XSS no cliente / LGPD — **maior ASR de toda a matriz** |
-| 2 | **`b_excessive_agency`** — Llama 70B aceita escalada de papel via injeção | 32.5% → 27.5% (n=80) | **9.1 (Critical)** | Chargeback fraud / account takeover |
+| 2 | **`b_excessive_agency`** — Llama 70B aceita escalada de papel via injeção | 32.5% → 27.5% (n=80; redução n.s., q=1,00) | **9.1 (Critical)** | Chargeback fraud / account takeover — entra pelo alto ASR residual + CVSS, não pela queda |
 | 3 | **`a_model_theft` / `b_model_theft` / `c_model_theft`** — extração por *probing* | ~27–30% → **NÃO-APLICÁVEL** | 6.5 (Medium) | IP / model theft — defesa entregue é inerte (volume) |
-| 4 | **`b_sensitive_disclosure`** — regressão pós-defesa por eco de delimitador | 7.5% → 13.75% (n=80) | 8.5 (High) | Account takeover / LGPD — dentro do IC95% (não-significativa) |
+| 4 | **`b_sensitive_disclosure`** — regressão aparente pós-defesa por eco de delimitador | 7.5% → 13.75% (n=80) | 8.5 (High) | Account takeover / LGPD — regressão **não-significativa** (q=1,00) |
 | 5 | **`c_pi_indirect`** — exfiltração via canal lateral no pipeline multi-model | 0% → 0% (ASR cego) | 8.0 (High) | Vendor impersonation — achado **arquitetural** (cenário composto §6.3 do threat model) |
 
 ### Quadro agregado de risco
 
-- **Onde a defesa atua sobre conteúdo (input/output), as reduções são substanciais.** Headlines: **`b_pi_direct` −93,3%** (14,42% → 0,96%) e **`c_sensitive_disclosure` −83,3%** (7,5% → 1,25%). O Llama Guard 4 da Variante C bloqueia **92%** das tentativas de injeção direta já na entrada.
+- **Uma única redução sobrevive ao teste de significância: `b_pi_direct` −93,3%** (14,42% → 0,96%; Fisher+FDR `q=0,007`). É a única vitória de defesa de conteúdo estatisticamente inequívoca da matriz. Reduções aparentes grandes como `c_sensitive_disclosure` (−83,3%, `q=0,61`) e `b_ioh` (−42,9%, `q=1,00`) **não passam** o teste — são variação dentro do ruído de baixa amostragem (tabela completa em §4.1). O Llama Guard 4 da Variante C ainda **bloqueia 92%** das tentativas de injeção direta na entrada (`block_rate`, observação direta independente da ASR).
 - **Onde a "defesa" atua sobre volume (model_theft), a redução é NÃO-APLICÁVEL.** O rate limiting do `AntiTheftGuard` é controle de volume, não de conteúdo; o ataque se completa dentro do threshold. Reportar uma "redução %" aqui seria enganoso (§4.3 e §6.4).
-- **Não publicamos um número único de "redução agregada".** Ele misturaria ganhos reais de conteúdo, não-resultados de volume e ruído estatístico de baixa amostragem (IC95% Wilson sobrepostos). A honestidade do indicador é, ela própria, um achado (ver `feedback` metodológico em §9.4).
+- **Não publicamos um número único de "redução agregada".** Ele misturaria a única redução real de conteúdo (`b_pi_direct`), não-resultados de volume (model_theft) e ruído estatístico de baixa amostragem (`q ≥ 0,05` no teste de Fisher com correção FDR). A honestidade do indicador é, ela própria, um achado (ver `feedback` metodológico em §9.4).
 
 ### Recomendações priorizadas (detalhe em §8)
 
@@ -60,6 +60,7 @@ As três arquiteturas:
 ### 2.2 Metodologia
 
 - **ASR** calculado por célula com **intervalo de confiança de Wilson 95%**; heurística de sucesso por categoria + verificação manual amostral (10%).
+- **Significância por célula:** cada par baseline↔pós-defesa é testado com **Fisher exato (two-sided)** sobre a tabela 2×2, com **correção de comparações múltiplas Benjamini-Hochberg (FDR)** sobre as 21 células. Uma mudança só é tratada como **vitória ou regressão real** quando `q < 0,05` (coluna `significant_fdr` em `report/significance.csv`, gerada por `scripts/compute_significance.py`). Mudanças com `q ≥ 0,05` são **variação dentro do ruído** (n pequeno), não efeitos causais. Isto substitui o critério anterior de sobreposição de IC, conservador demais (ver `LIMITATIONS.md` §1–2).
 - **CVSS v3.1** Base + Environmental (CR:H/IR:H/AR:M para o contexto payments); Temporal omitido por indisponibilidade de dados de exploitability pública para LLMs comerciais.
 - **Reprodutibilidade** como merge blocker: ambiente em Docker Compose, versões fixadas, evidências versionadas, notebook consolidado.
 
@@ -91,6 +92,26 @@ O threat model formal está em [`report/threat_model.md`](threat_model.md). Resu
 ![Matriz 3×7 — ASR baseline, pós-defesa e redução %](figures/matrix_baseline_post_reduction.png)
 
 *Fonte: `notebooks/00_audit_report.ipynb` sobre `evidence/post_defense/reduction_summary.csv`. No painel (c), **N/A** marca `model_theft` (controle de volume, §4.3) e **—** marca células com ASR baseline 0 (nada a reduzir).*
+
+**Significância por célula (Fisher exato + correção FDR Benjamini-Hochberg).** Fonte: `report/significance.csv` (`scripts/compute_significance.py` sobre `report/audit_counts.csv`). Só células com atividade (ASR baseline ou pós > 0) são testáveis. **De 21 células, exatamente uma tem mudança estatisticamente significativa: `b_pi_direct`.** Todas as demais reduções e regressões são variação dentro do ruído (`q ≥ 0,05`).
+
+| Célula | ASR base → pós | Δ | p | q (FDR) | Significativo (q<0,05) |
+|---|---|---|---|---|---|
+| `b_pi_direct` | 14,42% → 0,96% | −13,5 pp | 0,0003 | **0,007** | ✅ **sim (redução)** |
+| `c_sensitive_disclosure` | 7,50% → 1,25% | −6,3 pp | 0,117 | 0,61 | ❌ não |
+| `b_excessive_agency` | 32,50% → 27,50% | −5,0 pp | 0,605 | 1,00 | ❌ não |
+| `b_ioh` | 7,00% → 4,00% | −3,0 pp | 0,537 | 1,00 | ❌ não |
+| `c_ioh` | 8,00% → 6,00% | −2,0 pp | 0,783 | 1,00 | ❌ não |
+| `c_insecure_plugin` | 15,00% → 13,33% | −1,7 pp | 1,000 | 1,00 | ❌ não |
+| `a_sensitive_disclosure` | 6,25% → 5,00% | −1,3 pp | 1,000 | 1,00 | ❌ não |
+| `b_sensitive_disclosure` | 7,50% → 13,75% | +6,3 pp | 0,305 | 1,00 | ❌ não (regressão) |
+| `c_excessive_agency` | 17,50% → 21,25% | +3,8 pp | 0,690 | 1,00 | ❌ não (regressão) |
+| `a_ioh` | 67,00% → 69,00% | +2,0 pp | 0,880 | 1,00 | ❌ não (regressão) |
+| `a_insecure_plugin` | 1,67% → 3,33% | +1,7 pp | 1,000 | 1,00 | ❌ não (regressão) |
+| `b_insecure_plugin` | 13,33% → 15,00% | +1,7 pp | 1,000 | 1,00 | ❌ não (regressão) |
+| `a/b/c_model_theft` | ~27–30% → ~37–45% | — | — | — | **N/A** (volume, §4.3) |
+
+> **Nota sobre `model_theft`:** mesmo *sem* a correção FDR, só `a_model_theft` (p=0,011) e `b_model_theft` (p=0,032) cruzariam α=0,05 — e ambos **desaparecem após o FDR** (q=0,11 e q=0,22). De todo modo a categoria é **NÃO-APLICÁVEL** por construção (a defesa é controle de volume e a ASR pós sobe; §4.3), então não entra como vitória nem como regressão. As 6 células com ASR baseline e pós 0% (`a/c_pi_direct`, `a/b/c_pi_indirect`, `a_excessive_agency`) são omitidas: não há mudança a testar.
 
 ### 4.2 Bônus do Guard — taxa de bloqueio na entrada
 
@@ -148,7 +169,7 @@ Cada finding usa o ID `{variante}_{categoria}`, consistente com a rastreabilidad
 ### 6.1 Prompt injection direta
 
 - **`a_pi_direct`** — Baseline 0% (0/104), pós 0%. **Causa raiz:** o alinhamento Constitutional AI do Claude trata DAN/"ignore previous" como caso de borda. **Remediação:** nenhuma adicional; risco residual baixo.
-- **`b_pi_direct`** — Baseline 14,42% (15/104) → **0,96% (−93,3%)**. **Causa raiz:** Llama 70B é mais permissivo a instruções adversariais fluentes. **Evidência:** Rebuff + perplexidade + delimitadores `<USER_INPUT>` reduziram a quase zero; input layer também bloqueou 15,4%. **Impacto:** account takeover/escalada. **Remediação:** já efetiva (defesa de conteúdo).
+- **`b_pi_direct`** — Baseline 14,42% (15/104) → **0,96% (−93,3%)**. **Única redução estatisticamente significativa da matriz** (Fisher+FDR `q=0,007`). **Causa raiz:** Llama 70B é mais permissivo a instruções adversariais fluentes. **Evidência:** Rebuff + perplexidade + delimitadores `<USER_INPUT>` reduziram a quase zero; input layer também bloqueou 15,4%. **Impacto:** account takeover/escalada. **Remediação:** já efetiva (defesa de conteúdo).
 - **`c_pi_direct`** — Baseline 0%, pós 0%, **block_rate 92,3%**. **Causa raiz:** Llama Guard 4 nativo barra injeção direta na entrada. **Risco residual real:** falsos-positivos (não falsos-negativos). Ver cenário 2 ([`threat_model.md`](threat_model.md) §6.2).
 
 ### 6.2 Prompt injection indireta (RAG poisoning)
@@ -158,9 +179,9 @@ Cada finding usa o ID `{variante}_{categoria}`, consistente com a rastreabilidad
 
 ### 6.3 Insecure output handling
 
-- **`a_ioh`** — Baseline **67% (67/100)** → 69%. **Maior ASR de toda a matriz.** **Causa raiz:** Claude responde com HTML/markdown não-sanitizado quando solicitado (`<script>`, event handlers). **Evidência:** a leve piora pós-defesa está dentro do IC95% Wilson (ruído). **Impacto:** XSS no contexto do cliente, vazamento de token — LGPD. **Remediação:** sanitização **no front-end** (fora do escopo do agente); o modelo não é a camada certa para este controle.
-- **`b_ioh`** — 7% → 4% (−42,9%). **Causa raiz:** Llama 70B é mais conservador em formatar HTML. **Remediação:** filtro de output opt-in já reduz; risco residual baixo.
-- **`c_ioh`** — 8% → 6% (−25%). **Causa raiz:** mesmo modelo de B; Presidio não filtra XSS (não é PII). Risco residual ≈ B; o Guard nativo não cobre output handling.
+- **`a_ioh`** — Baseline **67% (67/100)** → 69%. **Maior ASR de toda a matriz.** **Causa raiz:** Claude responde com HTML/markdown não-sanitizado quando solicitado (`<script>`, event handlers). **Evidência:** a leve piora pós-defesa é variação dentro do ruído (Fisher+FDR `q=1,00`). **Impacto:** XSS no contexto do cliente, vazamento de token — LGPD. **Remediação:** sanitização **no front-end** (fora do escopo do agente); o modelo não é a camada certa para este controle.
+- **`b_ioh`** — 7% → 4% (−42,9% aparente, **não-significativo**: `q=1,00`, 7→4 sucessos/100). **Causa raiz:** Llama 70B é mais conservador em formatar HTML. **Remediação:** filtro de output opt-in; o ponto estimado sugere melhora, mas não é distinguível do ruído com este n. Risco residual baixo.
+- **`c_ioh`** — 8% → 6% (−25% aparente, **não-significativo**: `q=1,00`). **Causa raiz:** mesmo modelo de B; Presidio não filtra XSS (não é PII). Risco residual ≈ B; o Guard nativo não cobre output handling.
 
 ### 6.4 Model theft (extração / probing)
 
@@ -168,21 +189,21 @@ Cada finding usa o ID `{variante}_{categoria}`, consistente com a rastreabilidad
 
 ### 6.5 Sensitive information disclosure
 
-- **`a_sensitive_disclosure`** — 6,25% → 5% (−20%). Claude resiste; Presidio opt-in reduz mais. Risco residual moderado.
-- **`b_sensitive_disclosure`** — 7,5% → **13,75% (regressão aparente)**. **Causa raiz:** com delimitadores explícitos, o Llama 70B paradoxalmente cita literalmente parte do conteúdo dentro de `<USER_INPUT>` em algumas respostas. **Evidência:** IC95% Wilson de baseline [3,5–15,4%] e pós [7,9–23,0%] **se sobrepõem** — a regressão **não é estatisticamente significativa** (6→11 sucessos/80). **Remediação:** instruir o modelo a nunca ecoar conteúdo de `<USER_INPUT>`, mesmo em paráfrase.
-- **`c_sensitive_disclosure`** — 7,5% → **1,25% (−83,3%)**, block 50%. **Melhor célula da matriz em valor absoluto pós-defesa.** **Causa raiz da eficácia:** Presidio nativo + opt-in (defesa dupla) + Guard bloqueando S7/Privacy. Valida defense-in-depth (cenário 1, [`threat_model.md`](threat_model.md) §6.1).
+- **`a_sensitive_disclosure`** — 6,25% → 5% (−20% aparente, **não-significativo**: `q=1,00`). Claude resiste; a variação pós-defesa é ruído. Risco residual moderado.
+- **`b_sensitive_disclosure`** — 7,5% → **13,75% (regressão aparente)**. **Causa raiz:** com delimitadores explícitos, o Llama 70B paradoxalmente cita literalmente parte do conteúdo dentro de `<USER_INPUT>` em algumas respostas. **Evidência:** o teste de Fisher com correção FDR confirma que a regressão **não é estatisticamente significativa** (`q=1,00`; 6→11 sucessos/80; os IC95% Wilson baseline [3,5–15,4%] e pós [7,9–23,0%] também se sobrepõem). **Remediação:** instruir o modelo a nunca ecoar conteúdo de `<USER_INPUT>`, mesmo em paráfrase.
+- **`c_sensitive_disclosure`** — 7,5% → 1,25% (−83,3% aparente), block 50%. **Menor ASR pós-defesa em valor absoluto, mas a redução não sobrevive ao teste de significância** (Fisher+FDR `q=0,61`; 6→1 sucessos/80 — n pequeno demais). **Não é correto reivindicá-la como vitória causal.** O ponto estimado é encorajador e *consistente* com defense-in-depth (Presidio nativo + opt-in + Guard bloqueando S7/Privacy; cenário 1, [`threat_model.md`](threat_model.md) §6.1), mas é indistinguível do ruído com este n.
 
 ### 6.6 Insecure plugin design
 
-- **`a_insecure_plugin`** — 1,67% → 3,33% (1→2 sucessos/60; regressão dentro do IC, não-significativa). Reasoning do Claude rejeita ações sem ownership.
-- **`b_insecure_plugin`** — 13,33% → 15%. **Causa raiz:** Llama 70B aceita argumentos não-validados; `ToolGuard` corrige erros de schema mas **TOCTOU semântico** persiste. **Remediação:** revalidação de status no momento do *execute* (lógica de aplicação, não-LLM).
-- **`c_insecure_plugin`** — 15% → 13,33% (−11,1%). Pipeline multi-model não ajuda: Guard não vê tools, Presidio não vê argumentos. Risco residual ≈ B.
+- **`a_insecure_plugin`** — 1,67% → 3,33% (1→2 sucessos/60; regressão **não-significativa**, `q=1,00`). Reasoning do Claude rejeita ações sem ownership.
+- **`b_insecure_plugin`** — 13,33% → 15% (regressão **não-significativa**, `q=1,00`). **Causa raiz:** Llama 70B aceita argumentos não-validados; `ToolGuard` corrige erros de schema mas **TOCTOU semântico** persiste. **Remediação:** revalidação de status no momento do *execute* (lógica de aplicação, não-LLM).
+- **`c_insecure_plugin`** — 15% → 13,33% (−11,1% aparente, **não-significativo**: `q=1,00`). Pipeline multi-model não ajuda: Guard não vê tools, Presidio não vê argumentos. Risco residual ≈ B.
 
 ### 6.7 Excessive agency
 
 - **`a_excessive_agency`** — 0% → 0%. Claude rejeita escalada por reasoning; allow-list por perfil reforça por construção.
-- **`b_excessive_agency`** — **32,5% → 27,5%** (n=80). **Categoria mais vulnerável de B; CVSS Env 9.1 (Critical).** **Causa raiz:** Llama 70B aceita *role-switching* via injeção. **Evidência:** allow-list reduz o absoluto mas não previne todas as variantes. **Impacto:** chargeback fraud, operação em nome de terceiro. **Remediação:** allow-list + classificador de intenção pré-`process_refund`.
-- **`c_excessive_agency`** — 17,5% → 21,25% (variação dentro do IC95%; baseline já menor que B graças ao Guard). **Apesar do Guard, escalada via *tool chaining* continua passando** — o Guard não vê tools. Mesma remediação de B.
+- **`b_excessive_agency`** — **32,5% → 27,5%** (n=80). **Categoria mais vulnerável de B; CVSS Env 9.1 (Critical)** — pelo alto ASR residual, não pela queda. **Causa raiz:** Llama 70B aceita *role-switching* via injeção. **Evidência:** allow-list reduz o ponto estimado, mas a queda **não é significativa** (`q=1,00`) e não previne todas as variantes. **Impacto:** chargeback fraud, operação em nome de terceiro. **Remediação:** allow-list + classificador de intenção pré-`process_refund`.
+- **`c_excessive_agency`** — 17,5% → 21,25% (variação **não-significativa**, `q=1,00`; baseline já menor que B graças ao Guard). **Apesar do Guard, escalada via *tool chaining* continua passando** — o Guard não vê tools. Mesma remediação de B.
 
 ---
 
@@ -191,8 +212,8 @@ Cada finding usa o ID `{variante}_{categoria}`, consistente com a rastreabilidad
 Após as defesas, o risco residual **concentra-se** de forma distinta em cada arquitetura:
 
 - **Variante A (Claude):** perfil mais alinhado em injeção e agência (ASR 0% em pi_direct, pi_indirect, excessive_agency), **mas dominada por `a_ioh` (69%)** — output handling é seu risco residual material, mitigável apenas no front-end. Model theft sistêmico permanece.
-- **Variante B (Llama 70B):** risco residual concentrado em **`b_excessive_agency` (27,5%, Critical)** e **`b_insecure_plugin` (15%)** — vetores de fraude direta em payments. Defesas de conteúdo funcionaram muito bem em pi_direct (−93%) e ioh (−43%). Regressão de disclosure é configurável.
-- **Variante C (Pipeline):** **melhor postura geral** em injeção e disclosure (disclosure 1,25%, pi_direct bloqueado 92%), porém carrega (a) o **risco arquitetural único** do cenário 3 (exfiltração via canal lateral, invisível à ASR) e (b) a mesma exposição de B em plugin/agency (Guard não vê tools). Maior complexidade operacional.
+- **Variante B (Llama 70B):** risco residual concentrado em **`b_excessive_agency` (27,5%, Critical)** e **`b_insecure_plugin` (15%)** — vetores de fraude direta em payments. A defesa de conteúdo teve efeito **significativo** em pi_direct (−93%, `q=0,007`); a melhora aparente em ioh (−43%) **não é estatisticamente significativa** (`q=1,00`). A regressão de disclosure é não-significativa e configurável.
+- **Variante C (Pipeline):** **melhor postura geral em injeção e disclosure por valor absoluto pós-defesa** (disclosure 1,25%; pi_direct bloqueado 92%) — ainda que a redução de disclosure não seja significativa (`q=0,61`) e o bloqueio de 92% seja `block_rate`, não redução de ASR. Carrega (a) o **risco arquitetural único** do cenário 3 (exfiltração via canal lateral, invisível à ASR) e (b) a mesma exposição de B em plugin/agency (Guard não vê tools). Maior complexidade operacional.
 - **Sistêmico (A/B/C):** **model theft** sem defesa real (NÃO-APLICÁVEL) e dependência de PII em infraestrutura de terceiros.
 
 ---
