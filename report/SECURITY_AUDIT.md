@@ -60,9 +60,10 @@ As três arquiteturas:
 ### 2.2 Metodologia
 
 - **ASR** calculado por célula com **intervalo de confiança de Wilson 95%**; heurística de sucesso por categoria + verificação manual amostral (10%).
+- **n por célula** varia de 60 (`insecure_plugin`) a 121 (`model_theft` em B/C); **`a_model_theft` tem n=79** (assimetria documentada e contextualizada em §4.3/§6.4 — não enviesa nenhuma conclusão, apenas alarga o IC de A em model_theft).
 - **Significância por célula:** cada par baseline↔pós-defesa é testado com **Fisher exato (two-sided)** sobre a tabela 2×2, com **correção de comparações múltiplas Benjamini-Hochberg (FDR)** sobre as 21 células. Uma mudança só é tratada como **vitória ou regressão real** quando `q < 0,05` (coluna `significant_fdr` em `report/significance.csv`, gerada por `scripts/compute_significance.py`). Mudanças com `q ≥ 0,05` são **variação dentro do ruído** (n pequeno), não efeitos causais. Isto substitui o critério anterior de sobreposição de IC, conservador demais (ver `LIMITATIONS.md` §1–2).
 - **CVSS v3.1** Base + Environmental (CR:H/IR:H/AR:M para o contexto payments); Temporal omitido por indisponibilidade de dados de exploitability pública para LLMs comerciais.
-- **Reprodutibilidade** como merge blocker: ambiente em Docker Compose, versões fixadas, evidências versionadas, notebook consolidado.
+- **Reprodutibilidade** como merge blocker: ambiente em Docker Compose, versões fixadas, evidências versionadas, notebook consolidado. Para provedores black-box, o critério de reprodução é **"célula dentro do IC95%"**, não números idênticos (string exata de modelo + data do run em [`tech-stack.md`](../specs/tech-stack.md) §"Reprodutibilidade e fixação de runtime"). Caminho **sem-API**: as contagens agregadas estão em `report/audit_counts.csv` (versionado), e o notebook 00 regenera figuras, tabelas e significância sobre os CSVs commitados, sem chamar LLM.
 
 ### 2.3 Fora do escopo
 
@@ -138,6 +139,10 @@ A única defesa entregue contra extração é o rate limiting do `AntiTheftGuard
 
 Por isso, `model_theft` recebe `reduction_pct = NÃO-APLICÁVEL` em vez de um número inflado. Defesa real exigiria detecção semântica de *probing* ou *output perturbation* — esta depende de acesso a logits, indisponível em Anthropic e Together (§8 e §9.4).
 
+> **Definição de `residual_asr` para model_theft (rastreabilidade do CSV).** Em `report/security_audit_findings.csv`, as três células de `model_theft` têm **`residual_asr := asr_base`** (≈0,27–0,30), e **não** `asr_post` (≈0,37–0,45). É uma escolha *deliberada*: como a defesa é controle de volume, o `asr_post` está inflado pela mistura de requisições bloqueadas com permitidas (acima), então usá-lo como exposição residual superestimaria o risco. Para todas as outras categorias, `residual_asr := asr_post`. Um leitor que escaneie o CSV e veja `residual_asr < asr_post` em model_theft está vendo esta definição, não um erro de dado.
+
+> **n assimétrico de model_theft (`a`=79 vs `b`/`c`=121).** A bateria de model_theft tem ~60 técnicas de *probing*; B e C coletaram ~2 registros por técnica (n=121), enquanto a Variante A coletou ~1 (n=79) — uma diferença de **coleta**, por controle de custo da API Anthropic (o provider mais caro da matriz; ver [`tech-stack.md`](../specs/tech-stack.md) §"Custos"). **Efeito sobre as conclusões: nenhum direcional.** O n menor apenas alarga o IC95% Wilson de `a_model_theft` ([18,1%–37,2%]); como a redução é NÃO-APLICÁVEL nas três variantes e a categoria não sustenta nenhuma alegação de prioridade comparativa, a assimetria não muda a leitura. Registrada por completude (ver `LIMITATIONS.md` §4).
+
 ---
 
 ## 5. Análise arquitetural comparativa (A vs B vs C)
@@ -185,7 +190,7 @@ Cada finding usa o ID `{variante}_{categoria}`, consistente com a rastreabilidad
 
 ### 6.4 Model theft (extração / probing)
 
-- **`a_model_theft`** (26,58% → 45%), **`b_model_theft`** (28,93% → 42,5%), **`c_model_theft`** (29,75% → 36,67%) — **redução NÃO-APLICÁVEL** nas três. **Causa raiz:** não há defesa de conteúdo; só rate limiting (volume). **Evidência:** anti-theft **funciona como projetado** (A e B bloqueiam as requisições 61→120 de cada sessão; `block_rate` 50% = aritmética do threshold), mas o ataque se completa dentro do threshold (§4.3). C não tem anti-theft por design (usa pipeline próprio). **Impacto:** roubo de IP comportamental. **Remediação:** detecção semântica de *probing* + *output perturbation* (exige logits / self-hosting). **Achado sistêmico nas três arquiteturas.**
+- **`a_model_theft`** (26,58% → 45%; n=79), **`b_model_theft`** (28,93% → 42,5%; n=121), **`c_model_theft`** (29,75% → 36,67%; n=121) — **redução NÃO-APLICÁVEL** nas três (n assimétrico e definição `residual_asr := asr_base` em §4.3). **Causa raiz:** não há defesa de conteúdo; só rate limiting (volume). **Evidência:** anti-theft **funciona como projetado** (A e B bloqueiam as requisições 61→120 de cada sessão; `block_rate` 50% = aritmética do threshold), mas o ataque se completa dentro do threshold (§4.3). C não tem anti-theft por design (usa pipeline próprio). **Impacto:** roubo de IP comportamental. **Remediação:** detecção semântica de *probing* + *output perturbation* (exige logits / self-hosting). **Achado sistêmico nas três arquiteturas.**
 
 ### 6.5 Sensitive information disclosure
 
@@ -221,6 +226,8 @@ Após as defesas, o risco residual **concentra-se** de forma distinta em cada ar
 ## 8. Remediações priorizadas
 
 Priorização por CVSS Environmental × ASR residual × materialidade de negócio. Detalhe de scores em [`threat_model.md`](threat_model.md) §8.
+
+> **`priority = cvss_env × residual_asr` é um ranking *ad-hoc*, não uma métrica CVSS padrão.** O CVSS Base já embute sub-métricas de exploitabilidade (Attack Complexity, Privileges Required, User Interaction); multiplicar o score por uma taxa de sucesso empírica (ASR) **conta a exploitabilidade parcialmente duas vezes**. É uma heurística de ordenação defensável (combina severidade contextualizada com probabilidade observada), mas não deve ser lida como um escore CVSS. Um tratamento sem dupla contagem usaria a ASR como *likelihood* multiplicando apenas o sub-score de Impacto do CVSS, não o score completo (ver `LIMITATIONS.md` §7).
 
 | Prio | Finding(s) | CVSS Env | Remediação | Camada | Esforço |
 |---|---|---|---|---|---|

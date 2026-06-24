@@ -100,7 +100,7 @@ Modelo proprietário da Anthropic, acessado via API. Representa o estado da arte
 - Tool use nativo de alta qualidade, padrão no mercado
 - Alinhamento via Constitutional AI, baseline forte contra prompt injection direta
 - Ausência de acesso a logits e pesos define a fronteira de ataques aplicáveis (apenas black-box), o que é exatamente o cenário de produção realista para clientes de payments
-- Identifier do modelo: `claude-sonnet-4-5` (versão mais recente disponível via API)
+- Identifier do modelo (runtime): `claude-sonnet-4-6` (string exata usada na coleta; ver §"Reprodutibilidade e fixação de runtime")
 
 **Custo estimado para o projeto:** US$ 30–60 em chamadas durante toda a execução da matriz 3×7 (baseline + pós-defesa).
 
@@ -490,7 +490,7 @@ openai                    1.55 (cliente OpenAI-compatible para Claude, Together 
 groq                      0.13 (SDK Python — provider legado, opcional)
 transformers              4.46+ (apêndice white-box + perplexidade)
 torch                     2.12+cpu (índice CPU do PyTorch; apêndice white-box + perplexidade)
-claude-sonnet             4.5 (claude-sonnet-4-5)
+claude-sonnet             4.6 (claude-sonnet-4-6)
 llama                     meta-llama/Llama-3.3-70B-Instruct-Turbo (via Together AI)
 llama-guard               meta-llama/Llama-Guard-4-12B (via Together AI)
 gpt-2                     gpt2 (via Hugging Face Hub)
@@ -499,6 +499,27 @@ pyrit                     0.6
 presidio                  mock regex (scripts/presidio_mock.py) — não o container Analyzer
 rebuff                    detector heurístico customizado — não a biblioteca rebuff
 ```
+
+---
+
+## Reprodutibilidade e fixação de runtime
+
+> Para provedores black-box (Anthropic, Together), reprodução significa **"dentro do IC95% por célula"**, NÃO números idênticos. Temperatura 0 não garante determinismo bit-a-bit em API, e provedores atualizam modelos silenciosamente (a depreciação do Groq que forçou o ADR-002 é prova viva). A string de modelo de um provedor hospedado **não é um pin imutável**.
+
+**Strings exatas de modelo usadas na coleta (fonte de verdade: `.env`, variáveis `LLM_*`):**
+
+| Papel | Variante | String exata | Provider |
+|---|---|---|---|
+| Agente | A | `claude-sonnet-4-6` | Anthropic API |
+| Agente | B, C | `meta-llama/Llama-3.3-70B-Instruct-Turbo` | Together AI (`https://api.together.xyz/v1`) |
+| Input guard | C | `meta-llama/Llama-Guard-4-12B` | Together AI |
+| White-box (apêndice) | — | `gpt2` | Hugging Face Hub (pesos locais) |
+
+**Datas dos runs** (de `evidence/*/`, timestamps UTC): **baseline 2026-05-24 a 2026-05-25**; **pós-defesa 2026-05-27**.
+
+**Critério de reprodução:** uma reprodução é bem-sucedida quando o ASR re-medido de cada célula cai **dentro do IC95% Wilson** publicado em `report/security_audit_matrix.csv` — não "diff zero". Quem reproduzir deve registrar a string exata de modelo + data do próprio run (ver template em `.github/ISSUE_TEMPLATE/reproduction_report.md`).
+
+**Caminho sem-API (reprodução da cadeia de análise, desacoplada do não-determinismo do provedor):** como `evidence/` é gitignored, um clone limpo não tem os JSONs brutos; mas as **contagens agregadas estão versionadas** em `report/audit_counts.csv` (21 linhas: `succ/n` base e pós). Re-executar `notebooks/00_audit_report.ipynb` sobre os CSVs commitados (`audit_counts.csv`, `security_audit_matrix.csv`) regenera todas as figuras, tabelas e os testes de significância (`scripts/compute_significance.py`) **sem chamar nenhum LLM**.
 
 ---
 
