@@ -31,7 +31,7 @@ As três arquiteturas:
 | 2 | **`b_excessive_agency`** — Llama 70B aceita escalada de papel via injeção | 32.5% → 27.5% (n=80; redução n.s., q=1,00) | **9.1 (Critical)** | Chargeback fraud / account takeover — entra pelo alto ASR residual + CVSS, não pela queda |
 | 3 | **`a_model_theft` / `b_model_theft` / `c_model_theft`** — extração por *probing* | ~27–30% → **NÃO-APLICÁVEL** | 6.5 (Medium) | IP / model theft — defesa entregue é inerte (volume) |
 | 4 | **`b_sensitive_disclosure`** — regressão aparente pós-defesa por eco de delimitador | 7.5% → 13.75% (n=80) | 8.5 (High) | Account takeover / LGPD — regressão **não-significativa** (q=1,00) |
-| 5 | **`c_pi_indirect`** — exfiltração via canal lateral no pipeline multi-model | 0% → 0% (ASR cego) | 8.0 (High) | Vendor impersonation — achado **arquitetural** (cenário composto §6.3 do threat model) |
+| 5 | **`c_pi_indirect`** — exfiltração via canal lateral no pipeline multi-model | 0% → 0% (ASR cego) | 8.0 (High) | Vendor impersonation — **estudo de caso arquitetural** / prova de existência, sem taxa medida (cenário composto §6.3 do threat model) |
 
 ### Quadro agregado de risco
 
@@ -79,7 +79,7 @@ O threat model formal está em [`report/threat_model.md`](threat_model.md). Resu
 - **Três cenários de vulnerabilidade composta** ([`threat_model.md`](threat_model.md) §6) — o achado central do Entregável 3:
   - **Cenário 1:** injeção sobrevive ao Guard, é capturada pelo Presidio (defense-in-depth funciona).
   - **Cenário 2:** Guard captura jailbreak que o Presidio nunca veria (responsabilidades disjuntas).
-  - **Cenário 3 (achado):** a *composição* cria a brecha — exfiltração via canal lateral em `pi_indirect` que passa pelo Guard (input limpo) e pelo Presidio (canal não-PII). **Defense in depth não é comutativa nem transitiva quando as camadas têm sensores diferentes.**
+  - **Cenário 3 (estudo de caso):** a *composição* cria a brecha — exfiltração via canal lateral em `pi_indirect` que passa pelo Guard (input limpo) e pelo Presidio (canal não-PII). Este é um **único cenário construído à mão** (prova de existência), não uma taxa medida: demonstramos que **defense in depth *pode* não ser comutativa nem transitiva quando as camadas têm sensores diferentes** — não que esse seja o regime geral. Converter a demonstração em uma taxa de sucesso (bateria de N payloads) é trabalho futuro de red-team (ver `LIMITATIONS.md` §3 e `docs/EVALUATION.md` Trilha 2).
 
 ![Fluxo da Variante C — pipeline multi-model](assets/variante_c_flow.svg)
 
@@ -175,7 +175,7 @@ Cada finding usa o ID `{variante}_{categoria}`, consistente com a rastreabilidad
 ### 6.2 Prompt injection indireta (RAG poisoning)
 
 - **`a_pi_indirect`** / **`b_pi_indirect`** — Baseline 0% (0/90), pós 0%. **Causa raiz:** ambos os modelos tratam conteúdo recuperado via RAG como dado, não instrução, mesmo com veneno recuperado em ~86% das queries. **Remediação:** nenhuma adicional no baseline.
-- **`c_pi_indirect`** — ASR 0%, **mas** o cenário composto 3 ([`threat_model.md`](threat_model.md) §6.3) demonstra **exfiltração via canal lateral**: o Guard só vê o input (limpo) do comprador; o Presidio só vê padrões PII (e redige o e-mail), mas a *confirmação de existência* do alvo e dados não-PII passam pelas três camadas. **Impacto:** vendor impersonation. **Remediação:** reconhecedor de intenção de exfiltração no Presidio **ou** classificador pós-RAG antes do Stage 2 (não implementado — §8). **A ASR é cega a este risco.**
+- **`c_pi_indirect`** — ASR 0%, **mas** o cenário composto 3 ([`threat_model.md`](threat_model.md) §6.3) **demonstra ser possível** uma **exfiltração via canal lateral**: o Guard só vê o input (limpo) do comprador; o Presidio só vê padrões PII (e redige o e-mail), mas a *confirmação de existência* do alvo e dados não-PII passam pelas três camadas. **Natureza da evidência:** é um **estudo de caso / prova de existência** — um único cenário construído à mão, **sem taxa de sucesso medida** (a célula tem ASR 0%/0%, ou seja, a ASR é cega a este risco). Não afirmamos que seja o regime geral; medir uma taxa sobre uma bateria de payloads fica como trabalho de red-team (`LIMITATIONS.md` §3). **Impacto:** vendor impersonation. **Remediação:** reconhecedor de intenção de exfiltração no Presidio **ou** classificador pós-RAG antes do Stage 2 (não implementado — §8).
 
 ### 6.3 Insecure output handling
 
