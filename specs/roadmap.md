@@ -237,6 +237,23 @@ Cada fase entrega uma capacidade testável. As fases são dimensionadas para 1�
 
 ---
 
+## Fase 13 — Revisão metodológica: significância e limitações
+
+**Goal:** resolver os bloqueadores metodológicos (`LIMITATIONS.md` itens 1–8, Trilha 1 do `docs/EVALUATION.md`) antes de expor o projeto a avaliação adversarial externa. Pós-v1.0.0.
+
+- `report/audit_counts.csv` versionado (21 linhas, inteiros: `finding_id, variant, category, succ_base, n_base, succ_post, n_post`) gerado pelo notebook 00 a partir do `evidence/` local — destrava reprodução sem-API e os testes de significância
+- `statsmodels` adicionado ao `pyproject.toml` (grupo `redteam`, junto de `scipy>=1.13`)
+- `scripts/compute_significance.py`: Fisher exato por célula + correção FDR Benjamini-Hochberg → `report/significance.csv` (`p_value`, `q_value`, `significant_fdr`)
+- `SECURITY_AUDIT.md` reescrito: toda alegação de redução/regressão concorda com `significant_fdr`; vitória causal só onde significativo; coluna `q_value`/flag na §4.1
+- Cenário 3 recalibrado como prova de existência / estudo de caso (decisão B — reescopar) em §3, §6.2, threat_model §6.3 e abstract
+- Itens de rigor 4–7: kappa de Cohen (heurística-vs-manual, 10%), n assimétrico de `model_theft` documentado, `residual_asr := asr_base` explicitado, `priority` declarado como ranking ad-hoc, caveat de reprodutibilidade no tech-stack
+- Docs de revisão versionados (bilíngue): `LIMITATIONS.md` (raiz, PT), `docs/EVALUATION.md` (PT), `CONTRIBUTING.md` (raiz, EN), `.github/ISSUE_TEMPLATE/` (EN)
+- `scripts/check_significance_consistency.py` como novo merge blocker (falha se o relatório divergir de `significance.csv`)
+
+**Done when:** `make report` sai com código 0; `check_audit_coverage.py` 21/21; `check_significance_consistency.py` exit 0; nenhuma célula não-significativa mantém enquadramento de "vitória" ou "piora real"; spec em `specs/2026-06-24-fase-13-significancia-e-limitacoes/`.
+
+---
+
 ## Post-MVP (Adiados)
 
 Os seguintes itens estão explicitamente fora do escopo da entrega inicial (Fases 1–12):

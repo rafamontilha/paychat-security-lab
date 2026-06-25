@@ -31,3 +31,5 @@ report-pdf:
 
 report-check:
 	$(PYTHON) -X utf8 scripts/check_audit_coverage.py
+	$(PYTHON) -X utf8 scripts/compute_significance.py
+	$(PYTHON) -X utf8 scripts/check_significance_consistency.py
