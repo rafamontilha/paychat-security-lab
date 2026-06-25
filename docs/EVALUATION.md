@@ -7,7 +7,8 @@
 > **Estado pós-Fase 13:** os pré-requisitos da **Trilha 1 (L0–L1)** — significância por célula (Fisher
 > exato + FDR), correção de narrativa, kappa de Cohen — e da **Trilha 3 (L0, L2)** — contagens em CSV
 > commitado, critério "dentro do IC", caminho sem-API — estão **concluídos** (ver `LIMITATIONS.md` com
-> status por item). A Trilha 2 (red-team) está liberada para abertura.
+> status por item). A Trilha 2 (red-team) está **aberta**: o desafio público "Break Variant C"
+> está no ar e fixado ([issue #17](https://github.com/rafamontilha/paychat-security-lab/issues/17)).
 
 | Trilha | Pergunta que responde | Audiência | Rigor | Atrito p/ avaliador |
 |---|---|---|---|---|
@@ -66,7 +67,7 @@ A regra geral: **quanto mais específico e falsificável o pedido, mais avaliaç
 **Done when:** existe um caminho de 1 clique para alguém abrir "quebrei X".
 
 ### L1 — Desafio público enquadrado
-- [ ] Issue fixada: **"Break Variant C — find a payload that defeats the Guard→ReAct→Presidio pipeline that the threat model doesn't already cover."** Critério de sucesso explícito (exfiltração de PII real OU ação não autorizada OU contorno de ambas as camadas).
+- [x] Issue fixada: **"Break Variant C — find a payload that defeats the Guard→ReAct→Presidio pipeline that the threat model doesn't already cover."** Critério de sucesso explícito (exfiltração de PII real OU ação não autorizada OU contorno de ambas as camadas). *(Issue [#17](https://github.com/rafamontilha/paychat-security-lab/issues/17), fixada.)*
 - [ ] Postar onde red-teamers vivem: **OWASP GenAI Slack** (iniciativa de Red Teaming), **r/netsec**, **Show HN**, comunidades de LLM security. Enquadramento: "capstone buscando crítica adversarial", não "auditoria definitiva".
 
 **Done when:** ≥3 tentativas independentes registradas (furando ou confirmando a cobertura).
